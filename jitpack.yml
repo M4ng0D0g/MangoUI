@@ -1,0 +1,7 @@
+# 指定編譯環境為 Java 21
+jdk:
+  - openjdk21
+
+# 告訴 JitPack 執行編譯任務
+install:
+  - ./gradlew publishToMavenLocal -Dmaven.repo.local=$HOME/.m2/repository

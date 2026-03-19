@@ -1,4 +1,4 @@
-package com.mangoui.mixin;
+package com.myudog.mangoui.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;

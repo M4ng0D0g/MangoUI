@@ -2,44 +2,14 @@
 	"schemaVersion": 1,
 	"id": "mango-ui",
 	"version": "${version}",
-	"name": "mango-ui",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/mango-ui/icon.png",
-	"environment": "*",
+	"name": "Mango UI",
 	"entrypoints": {
 		"main": [
-			{
-				"value": "com.mangoui.Mangoui",
-				"adapter": "kotlin"
-			}
-		],
-		"client": [
-			{
-				"value": "com.mangoui.MangouiClient",
-				"adapter": "kotlin"
-			}
+			"com.myudog.mangoui.MangoUI"
 		]
 	},
-	"mixins": [
-		"mango-ui.mixins.json",
-		{
-			"config": "mango-ui.client.mixins.json",
-			"environment": "client"
-		}
-	],
 	"depends": {
-		"fabricloader": ">=0.18.4",
-		"minecraft": "~1.21.10",
-		"java": ">=21",
-		"fabric-api": "*",
-		"fabric-language-kotlin": "*"
+		"fabricloader": ">=0.15.11",
+		"fabric-language-kotlin": ">=1.12.1"
 	}
 }
