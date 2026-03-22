@@ -10,6 +10,13 @@ import net.minecraft.client.gui.DrawContext
  */
 abstract class BaseWidget(val entityId: Int = MyulibApiClient.createEntity()) {
 
+    /**
+     * Developer testing flag. Set to true when this widget has been tested locally.
+     * The RenderSystem will draw a small badge for tested widgets so developers
+     * can visually confirm coverage during manual testing.
+     */
+    var tested: Boolean = false
+
     init {
         // 每個 Widget 自身都具備變換、層級、以及「身為一個元件」的佈局屬性 (Margin/Padding/Weight)
         MyulibApiClient.addComponent(entityId, TransformComponent())

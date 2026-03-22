@@ -50,6 +50,30 @@ internal object RenderSystem {
         for (childId in hierarchy.children) {
             renderRecursive(world, childId, context, mouseX, mouseY, delta)
         }
+
+        // --- 開發者標記：繪製 Tested 標記（如果有） ---
+        // Draw a small badge at the top-right corner of the widget's computed bounds
+        try {
+            val baseWidget = widget
+            // widget is the instance of a BaseWidget-derived type
+            val testedField = baseWidget::class.java.getDeclaredField("tested")
+            testedField.isAccessible = true
+            val isTested = testedField.getBoolean(baseWidget)
+            if (isTested) {
+                val comp = world.getComponent<ComputedTransform>(entityId) ?: return
+                val bx = comp.x.toInt()
+                val by = comp.y.toInt()
+                val bw = comp.w.toInt()
+                // small 8x8 badge in top-right (with 2px padding)
+                val badgeSize = 8
+                val badgeX = bx + bw - badgeSize - 2
+                val badgeY = by + 2
+                // green badge
+                context.fill(badgeX, badgeY, badgeX + badgeSize, badgeY + badgeSize, 0xFF66CC66.toInt())
+            }
+        } catch (_: Throwable) {
+            // If reflection fails, ignore — this badge is purely development tooling
+        }
     }
 
     /**
