@@ -1,9 +1,10 @@
 name: Build and Release Mango UI
 
-# 觸發條件：當你推送以 "v" 開頭的 Tag 時（例如 v1.0.0 或 v1.1.0）
+# 觸發條件：當推送任何格式的 Tag 時（例如 1.0.0 或 1.1.0-beta）
 on:
   push:
-    branches: [ "main", "master" ]
+    tags:
+      - '*'
 
 jobs:
   build-and-release:
@@ -24,7 +25,7 @@ jobs:
           java-version: '21'
 
       - name: 🐘 設定 Gradle 快取與環境
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4 # 升級至 v4 以獲得更好的快取效能
 
       - name: 🔨 執行 Gradle 打包編譯
         run: ./gradlew build
@@ -39,4 +40,5 @@ jobs:
           # 自動抓取 build/libs 下剩下的 .jar (包含主程式與 sources 原始碼)
           files: build/libs/*.jar
           generate_release_notes: true # 自動根據你的 Commit 生成更新日誌
+          # 只要標籤名稱內含 test, beta 或 alpha，就會自動標記為預發布版本
           prerelease: ${{ contains(github.ref, 'test') || contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}

@@ -1,6 +1,6 @@
 # ECS 系統使用說明（完整參考）
 
-本文檔提供專案內 ECS（Entity-Component-System）子系統的詳細參考，目標讀者為想使用或擴充 ECS、撰寫 system、或整合 UI/事件系統的開發者。
+本文件提供專案內 ECS（Entity-Component-System）子系統的詳細參考，目標讀者為想使用或擴充 ECS、撰寫 system、或整合 UI/事件系統的開發者。
 
 目錄
 - 概要
@@ -10,6 +10,8 @@
   - Component（約定）
   - ComponentStorage（內部實作要點）
   - 事件（ComponentAddedEvent、World.eventBus）
+- 相關子系統
+  - Game / Timer 系統
 - 常見使用情境與完整範例
   - 創建 World 與 Entity
   - 新增/取得/查詢 Component
@@ -59,6 +61,20 @@ ComponentStorage（內部）
 事件（Event）
 - 每次 `addComponent` 都會觸發 `ComponentAddedEvent`，可在系統中接收以進行延後初始化或觸發相關流程。
 - `EcsWorld.eventBus` 提供 `register` / `dispatch` 介面（參見 Events.md 更詳內容）。
+
+相關子系統
+
+### Game / Timer 系統
+如果你要做遊戲時間邏輯，請直接看：
+
+- `docs/systems/TimerSystem.md`
+
+它會說明：
+- `TimerManager`
+- `Timer`
+- `TimerInstance`
+- `TimerSnapshot`
+- `TimerStartedEvent` / `TimerCheckpointEvent` / `TimerCompletedEvent`
 
 常見使用情境與完整範例
 
@@ -132,5 +148,8 @@ Q3: 事件 handler 沒有被呼叫
 - `src/main/kotlin/com/myudog/myulib/api/ecs/EcsWorld.kt`
 - `src/main/kotlin/com/myudog/myulib/internal/ecs/ComponentStorage.kt`
 - `src/main/kotlin/com/myudog/myulib/api/ecs/event`（事件定義）
+- `src/main/kotlin/com/myudog/myulib/api/game/`（Game 系統入口）
+- `src/main/kotlin/com/myudog/myulib/api/game/timer/`（Timer API）
+- `src/main/kotlin/com/myudog/myulib/internal/game/timer/`（Timer 內部實作）
 
 如需我掃描專案並針對你實際的 component 與 system 自動產生完整 API 表（包含每個成員的參數、預設值與範例），我可以進一步自動化此處理。請回覆「自動產生 API 表」即可。

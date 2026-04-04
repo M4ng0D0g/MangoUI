@@ -6,7 +6,7 @@
 - 概覽
 - 主要類別與函式
 - 使用範例：註冊、發佈、處理
-- 常見事件（ComponentAddedEvent）與使用情境
+- 常見事件（ComponentAddedEvent、Timer 事件）與使用情境
 - 進階話題：同步/非同步、優先權、解除註冊
 - 除錯建議
 
@@ -57,6 +57,19 @@ world.eventBus.dispatch(SpawnParticleEvent(ParticleData(...)))
 常見事件
 
 - `ComponentAddedEvent`：`EcsWorld.addComponent` 會在加入 component 後自動派發這個事件，payload 包含 `entityId` 與 `component`。
+- `TimerStartedEvent`：timer 開始時觸發，包含 `TimerSnapshot`。
+- `TimerPausedEvent`：timer 暫停時觸發。
+- `TimerResumedEvent`：timer 恢復時觸發。
+- `TimerResetEvent`：timer 重製時觸發。
+- `TimerStoppedEvent`：timer 停止時觸發。
+- `TimerTickEvent`：每次 timer tick 更新時觸發。
+- `TimerCheckpointEvent`：命中特定 tick（elapsed 或 remaining）時觸發。
+- `TimerCompletedEvent`：timer 完成時觸發。
+
+### Timer 事件文件
+如果你要的是 timer 的完整 API 與 payload 範例，請看：
+
+- `docs/systems/TimerSystem.md`
 
 進階話題
 
