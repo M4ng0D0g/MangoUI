@@ -61,20 +61,20 @@ public final class PermissionManager {
 
     public static PermissionResolution evaluate(PermissionContext context) {
         Objects.requireNonNull(context, "context");
-        PermissionResolution resolution = resolveLayer(PermissionLayer.GLOBAL, "global", GLOBAL_RULES, context);
-        if (resolution.decision() != PermissionDecision.PASS) {
-            return resolution;
-        }
-        resolution = resolveLayer(PermissionLayer.DIMENSION, context.dimensionId(), DIMENSION_RULES.get(context.dimensionId()), context);
-        if (resolution.decision() != PermissionDecision.PASS) {
+        PermissionResolution resolution = resolveLayer(PermissionLayer.USER, context.playerId().toString(), USER_RULES.get(context.playerId()), context);
+        if (!resolution.isUnset()) {
             return resolution;
         }
         resolution = resolveLayer(PermissionLayer.FIELD, context.fieldId(), FIELD_RULES.get(context.fieldId()), context);
-        if (resolution.decision() != PermissionDecision.PASS) {
+        if (!resolution.isUnset()) {
             return resolution;
         }
-        resolution = resolveLayer(PermissionLayer.USER, context.playerId().toString(), USER_RULES.get(context.playerId()), context);
-        return resolution.decision() != PermissionDecision.PASS ? resolution : PermissionResolution.pass();
+        resolution = resolveLayer(PermissionLayer.DIMENSION, context.dimensionId(), DIMENSION_RULES.get(context.dimensionId()), context);
+        if (!resolution.isUnset()) {
+            return resolution;
+        }
+        resolution = resolveLayer(PermissionLayer.GLOBAL, "global", GLOBAL_RULES, context);
+        return resolution.isUnset() ? PermissionResolution.unset() : resolution;
     }
 
     public static boolean isDenied(PermissionContext context) {
@@ -178,7 +178,7 @@ public final class PermissionManager {
                 groupBest = match;
             }
         }
-        return groupBest == null ? PermissionResolution.pass() : new PermissionResolution(groupBest.decision(), layer, sourceId, groupBest.id());
+        return groupBest == null ? PermissionResolution.unset() : new PermissionResolution(groupBest.decision(), layer, sourceId, groupBest.id());
     }
 
     private static PermissionGrant bestMatch(PermissionLayer layer, List<PermissionGrant> grants, String requestedNode) {
@@ -194,6 +194,4 @@ public final class PermissionManager {
         return best;
     }
 }
-
-
 

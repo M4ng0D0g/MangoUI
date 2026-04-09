@@ -9,6 +9,7 @@ Canonical docs:
 - `docs/component/index.md`
 - `docs/access/index.md`
 - `docs/field/index.md`
+- `docs/rolegroup/index.md`
 - `docs/identity/index.md`
 - `docs/permission/index.md`
 - `docs/team/index.md`
@@ -19,4 +20,3 @@ Canonical docs:
 - `docs/floating/index.md`
 - `docs/object/index.md`
 - `docs/animation/index.md`
-

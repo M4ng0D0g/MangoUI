@@ -2,7 +2,6 @@ package com.myudog.myulib.api.permission;
 
 public enum PermissionDecision {
     ALLOW,
-    DENY,
-    PASS
+    UNSET,
+    DENY
 }
-

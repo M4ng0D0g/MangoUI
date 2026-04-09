@@ -53,7 +53,7 @@ var instance = GameManager.createInstance(
 - `GameStateContext<S>`：state 轉移上下文，包含 `gameId`、`instanceId`、`from`、`to`
 - `GameTransition<S>`：描述一次狀態轉移是否允許
 - `GameStateMachine<S>`：狀態機介面，提供 `getCurrentState()`、`canTransition()`、`transition()`、`reset()`
-- `GameDefinition<S>`：定義遊戲初始狀態、允許轉移與 lifecycle hooks
+- `GameDefinition<S>`：只定義遊戲 id、初始狀態、允許轉移與 `createContext(...)`；不再負責模板式 feature / logic / component 裝配
 
 ## GameInstance
 

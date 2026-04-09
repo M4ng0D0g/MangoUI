@@ -1,6 +1,8 @@
 package com.myudog.myulib.api.game.state;
 
-public interface GameStateMachine<S extends Enum<S>> {
+import com.myudog.myulib.api.game.state.GameState;
+
+public interface GameStateMachine<S extends GameState> {
     S getCurrentState();
 
     boolean canTransition(S to);

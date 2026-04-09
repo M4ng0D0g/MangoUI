@@ -49,7 +49,7 @@ final class AccessSystemsTest {
         ));
         IdentityAdminService.assign(playerId, "builder");
 
-        PermissionAdminService.grantField("spawn", new PermissionGrant("field:spawn-pass", PermissionLayer.FIELD, "build", PermissionDecision.PASS, 0));
+        PermissionAdminService.grantField("spawn", new PermissionGrant("field:spawn-unset", PermissionLayer.FIELD, "build", PermissionDecision.UNSET, 0));
         PermissionAdminService.grantUser(playerId, new PermissionGrant("user:mine-deny", PermissionLayer.USER, "mine", PermissionDecision.DENY, 100));
 
         assertEquals("minecraft:the_nether", FieldAdminService.get("spawn").dimensionId());
@@ -58,4 +58,3 @@ final class AccessSystemsTest {
         assertEquals(PermissionDecision.DENY, PermissionAdminService.evaluate(new PermissionContext(playerId, "mine", "minecraft:the_nether", "spawn", Map.of())).decision());
     }
 }
-

@@ -17,7 +17,7 @@ new GameBootstrapConfig(specialObjects, metadata);
 ## 行為
 - `null` 會被轉成空 map
 - 內部會使用 `Map.copyOf(...)` 做不可變快照
-- `GameManager.createInstance(...)` 會先用 `GameDefinition.getRequiredSpecialObjectIds()` 驗證必要物件
+- `GameManager.createInstance(...)` 會把這份資料交給對應的 `GameDefinition.createContext(...)`，由 context 與 runtime 系統完成組裝
 
 ## 用法
 ```java

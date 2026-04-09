@@ -1,5 +1,7 @@
 package com.myudog.myulib.api.game.instance;
 
+import com.myudog.myulib.api.game.state.GameState;
+
 import com.myudog.myulib.api.game.bootstrap.GameBootstrapConfig;
 import com.myudog.myulib.api.game.bootstrap.GameObjectConfig;
 import com.myudog.myulib.api.game.feature.GameComponentFeature;
@@ -20,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class GameInstance<S extends Enum<S>> {
+public class GameInstance<S extends GameState> {
     private final int instanceId;
     private final GameDefinition<S> definition;
     private final GameBootstrapConfig bootstrapConfig;
@@ -53,12 +55,6 @@ public class GameInstance<S extends Enum<S>> {
     public <T extends GameFeature> T removeFeature(Class<T> type) { return features.remove(type); }
     public <T extends GameFeature> T getFeatureOrCreate(Class<T> type) { T existing = feature(type); if (existing != null) return existing; try { T created = type.getDeclaredConstructor().newInstance(); return putFeature(created); } catch (ReflectiveOperationException e) { throw new IllegalStateException("Unable to create feature: " + type.getName(), e); } }
 
-    public GameTimerFeature timers() { return getFeatureOrCreate(GameTimerFeature.class); }
-    public GameScoreboardFeature scoreboard() { return getFeatureOrCreate(GameScoreboardFeature.class); }
-    public GameObjectBindingFeature objectBindings() { return getFeatureOrCreate(GameObjectBindingFeature.class); }
-    public GameTeamFeature teams() { return getFeatureOrCreate(GameTeamFeature.class); }
-    public GameRegionFeature regions() { return getFeatureOrCreate(GameRegionFeature.class); }
-    public GameComponentFeature components() { return getFeatureOrCreate(GameComponentFeature.class); }
     @SuppressWarnings("unchecked")
     public GameLogicFeature<S> logicOrNull() { return feature(GameLogicFeature.class); }
     @SuppressWarnings("unchecked")
@@ -67,7 +63,7 @@ public class GameInstance<S extends Enum<S>> {
 
     public GameObjectConfig registerSpecialObject(GameObjectConfig config) {
         specialObjects.put(config.id(), config);
-        objectBindings().bind(config, null);
+        getFeatureOrCreate(GameObjectBindingFeature.class).bind(config, null);
         return config;
     }
 
@@ -79,9 +75,13 @@ public class GameInstance<S extends Enum<S>> {
         }
         S previous = currentState;
         GameStateContext<S> context = new GameStateContext<>(definition.getId(), instanceId, previous, to);
-        definition.onExitState(this, context);
+        if (previous != null) {
+            previous.onExit(this, context);
+        }
         currentState = to;
-        definition.onEnterState(this, context);
+        if (currentState != null) {
+            currentState.onEnter(this, context);
+        }
         GameLogicFeature<S> logic = logicOrNull();
         if (logic != null) {
             logic.publish(new LogicSignals.GameStateChangedSignal<>(this, previous, to));
@@ -102,7 +102,9 @@ public class GameInstance<S extends Enum<S>> {
         if (objectBindings != null) {
             objectBindings.tick(this);
         }
-        definition.onTick(this);
+        if (currentState != null) {
+            currentState.onTick(this);
+        }
     }
 
     public void destroy() {
@@ -110,7 +112,6 @@ public class GameInstance<S extends Enum<S>> {
             return;
         }
         enabled = false;
-        definition.onDestroy(this);
         GameLogicFeature<S> logic = logicOrNull();
         if (logic != null) {
             logic.publishGameDestroyed(this);
@@ -125,5 +126,3 @@ public class GameInstance<S extends Enum<S>> {
     public boolean hasSpecialObject(Identifier id) { return specialObjects.containsKey(id); }
     public GameObjectConfig requireSpecialObject(Identifier id) { GameObjectConfig config = specialObjects.get(id); if (config == null) throw new IllegalStateException("Missing special object: " + id); return config; }
 }
-
-

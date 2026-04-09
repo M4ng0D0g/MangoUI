@@ -19,6 +19,7 @@
 - [Logic](docs/logic/index.md)
 - [Floating](docs/floating/index.md)
 - [Object](docs/object/index.md)
+- [Camera](docs/camera/index.md)
 - [Animation](docs/animation/index.md)
 - [UI](docs/ui/index.md)
 - [UI Nodes](docs/ui/nodes/index.md)

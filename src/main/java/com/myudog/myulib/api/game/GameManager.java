@@ -1,12 +1,13 @@
 package com.myudog.myulib.api.game;
 
+import com.myudog.myulib.api.game.state.GameState;
+
 import com.myudog.myulib.api.game.bootstrap.GameBootstrapConfig;
 import com.myudog.myulib.api.game.bootstrap.GameObjectConfig;
 import com.myudog.myulib.api.game.components.ComponentManager;
 import com.myudog.myulib.api.game.feature.GameFeature;
 import com.myudog.myulib.api.game.feature.GameLogicFeature;
 import com.myudog.myulib.api.game.instance.GameInstance;
-import com.myudog.myulib.api.field.FieldManager;
 import com.myudog.myulib.api.identity.IdentityManager;
 import com.myudog.myulib.api.permission.PermissionAdminService;
 import com.myudog.myulib.api.permission.PermissionSeed;
@@ -39,6 +40,7 @@ public final class GameManager {
     }
 
     public static GameDefinition<?> unregister(Identifier gameId) {
+        TeamManager.unregisterGame(gameId);
         return DEFINITIONS.remove(gameId);
     }
 
@@ -47,35 +49,21 @@ public final class GameManager {
     }
 
     @SuppressWarnings("unchecked")
-    public static <S extends Enum<S>> GameDefinition<S> definition(Identifier gameId) {
+    public static <S extends GameState> GameDefinition<S> definition(Identifier gameId) {
         return (GameDefinition<S>) DEFINITIONS.get(gameId);
     }
 
     @SuppressWarnings("unchecked")
-    public static <S extends Enum<S>> GameInstance<S> createInstance(Identifier gameId, GameBootstrapConfig config) {
+    public static <S extends GameState> GameInstance<S> createInstance(Identifier gameId, GameBootstrapConfig config) {
         GameDefinition<S> definition = (GameDefinition<S>) Objects.requireNonNull(DEFINITIONS.get(gameId), "Unknown game definition: " + gameId);
         GameBootstrapConfig bootstrap = config == null ? new GameBootstrapConfig() : config;
-        definition.validateBootstrap(bootstrap);
         int instanceId = NEXT_INSTANCE_ID.getAndIncrement();
         GameInstance<S> instance = new GameInstance<>(instanceId, definition, bootstrap);
         for (GameFeature feature : definition.createFeatures(bootstrap)) {
             instance.putFeature(feature);
         }
-        instance.teams().clear();
-        for (var field : definition.createFields(bootstrap)) {
-            FieldManager.register(field);
-        }
         for (var group : definition.createIdentityGroups(bootstrap)) {
             IdentityManager.register(group);
-        }
-        for (var teamDefinition : definition.createTeams(bootstrap)) {
-            instance.teams().register(teamDefinition);
-            TeamManager.register(new com.myudog.myulib.api.team.TeamDefinition(
-                teamDefinition.id().toString(),
-                teamDefinition.displayName(),
-                teamDefinition.color().name(),
-                teamDefinition.properties().entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-            ));
         }
         for (PermissionSeed seed : definition.createPermissionSeeds(bootstrap)) {
             switch (seed.layer()) {
@@ -94,7 +82,6 @@ public final class GameManager {
         ComponentManager.bindInstance(instance, definition.createComponentBindings(bootstrap));
         bootstrap.specialObjects().values().forEach(instance::registerSpecialObject);
         INSTANCES.put(instanceId, instance);
-        definition.onCreate(instance);
         instance.logicOrNull().publishGameCreated(instance);
         return instance;
     }
@@ -116,12 +103,13 @@ public final class GameManager {
         if (instance == null) {
             return false;
         }
+        TeamManager.unregisterGame(instance.getDefinition().getId());
         instance.destroy();
         return true;
     }
 
     @SuppressWarnings("unchecked")
-    public static <S extends Enum<S>> boolean transition(int instanceId, S to) {
+    public static <S extends GameState> boolean transition(int instanceId, S to) {
         GameInstance<S> instance = (GameInstance<S>) INSTANCES.get(instanceId);
         return instance != null && instance.transition(to);
     }

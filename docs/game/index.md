@@ -5,7 +5,7 @@ The Game system is the high-level flow entry point. It manages game definitions,
 ## 類別架構關係
 - `Game` 是啟動入口，負責安裝 `GameManager`、`ComponentManager`、`TimerManager`；`Field` / `Identity` / `Permission` / `Team` 走獨立 access 架構。
 - `GameManager` 是定義與 instance 的中央註冊表，也是 `tickAll()` 的全域驅動者。
-- `GameDefinition` 是所有遊戲的設定基底，定義 state、feature、logic、component，以及可選的 team / access seed 建立方式。
+- `GameDefinition` 是所有遊戲的最小契約基底，只定義 id、initial state、allowed transitions 與 `createContext(...)`；runtime 組裝交給 context 與對應系統。
 - `GameInstance` 是實際執行中的遊戲容器，內含 feature store、special objects、components、logic；`team` / `timer` / `object` 走獨立系統文件。
 - `GameObjectBindingFeature` / `GameObjectHooks` 負責遊戲物件 runtime 與 mixin/hook 分發。
 - `GameTeamFeature` / `GameTeamDefinition` / `GameTeamColor` 負責程式碼建立的隊伍與成員綁定；access 類系統請看 `docs/access/`，team 主線請看 `docs/team/`。

@@ -13,24 +13,24 @@ public final class GameObjectHooks {
     }
 
     public static GameObjectDefinition register(GameInstance<?> instance, GameObjectConfig config, Object runtimeObject) {
-        return instance == null ? null : instance.objectBindings().register(instance, config, runtimeObject);
+        return instance == null ? null : instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).register(instance, config, runtimeObject);
     }
 
     public static void attach(GameInstance<?> instance, Identifier objectId, Object runtimeObject) {
         if (instance != null) {
-            instance.objectBindings().bindRuntime(instance, objectId, runtimeObject);
+            instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).bindRuntime(instance, objectId, runtimeObject);
         }
     }
 
     public static void detach(GameInstance<?> instance) {
         if (instance != null) {
-            instance.objectBindings().clear(instance);
+            instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).clear(instance);
         }
     }
 
     public static void tick(GameInstance<?> instance) {
         if (instance != null) {
-            instance.objectBindings().tick(instance);
+            instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).tick(instance);
         }
     }
 
@@ -41,13 +41,13 @@ public final class GameObjectHooks {
     }
 
     public static boolean interact(GameInstance<?> instance, Identifier objectId, Identifier sourceEntityId, GameObjectKind kind, Map<String, String> payload) {
-        return instance != null && instance.objectBindings().interact(instance, objectId, sourceEntityId, kind, payload);
+        return instance != null && instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).interact(instance, objectId, sourceEntityId, kind, payload);
     }
 
     public static boolean interactByKindAndType(GameObjectKind kind, Identifier type, Identifier sourceEntityId, Map<String, String> payload) {
         boolean consumed = false;
         for (GameInstance<?> instance : GameManager.getInstances()) {
-            consumed |= instance.objectBindings().interactByKindAndType(instance, kind, type, sourceEntityId, payload);
+            consumed |= instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).interactByKindAndType(instance, kind, type, sourceEntityId, payload);
         }
         return consumed;
     }

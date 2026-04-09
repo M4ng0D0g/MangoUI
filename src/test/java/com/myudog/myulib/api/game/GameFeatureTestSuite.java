@@ -11,6 +11,7 @@ import com.myudog.myulib.api.game.object.GameObjectHooks;
 import com.myudog.myulib.api.game.object.GameObjectRuntime;
 import com.myudog.myulib.api.game.object.GameObjectContext;
 import com.myudog.myulib.api.game.state.GameDefinition;
+import com.myudog.myulib.api.team.TeamManager;
 import com.myudog.myulib.api.game.team.GameTeamColor;
 import com.myudog.myulib.api.game.team.GameTeamDefinition;
 import net.minecraft.resources.Identifier;
@@ -84,38 +85,26 @@ public final class GameFeatureTestSuite {
         Identifier gameId = Identifier.fromNamespaceAndPath("myulib", "object_team_test");
         Identifier objectId = Identifier.fromNamespaceAndPath("myulib", "spawn_anchor");
         Identifier teamId = Identifier.fromNamespaceAndPath("myulib", "alpha_team");
-        GameDefinition<TestState> definition = new GameDefinition<>(gameId) {
-            @Override
-            public TestState getInitialState() {
-                return TestState.IDLE;
-            }
+        
+        Map<TestState, Set<TestState>> transitions = new EnumMap<>(TestState.class);
+        transitions.put(TestState.IDLE, Set.of(TestState.RUNNING));
+        transitions.put(TestState.RUNNING, Set.of(TestState.FINISHED));
+        transitions.put(TestState.FINISHED, Set.of(TestState.IDLE));
 
-            @Override
-            public Map<TestState, Set<TestState>> getAllowedTransitions() {
-                Map<TestState, Set<TestState>> map = new EnumMap<>(TestState.class);
-                map.put(TestState.IDLE, Set.of(TestState.RUNNING));
-                map.put(TestState.RUNNING, Set.of(TestState.FINISHED));
-                map.put(TestState.FINISHED, Set.of(TestState.IDLE));
-                return map;
-            }
-
+        GameDefinition<TestState> definition = new GameDefinition<>(gameId, TestState.IDLE, transitions) {
             @Override
             public java.util.List<GameObjectConfig> createGameObjects(GameBootstrapConfig config) {
                 return java.util.List.of(new GameObjectConfig(objectId, GameObjectKind.RESPAWN_POINT, Identifier.fromNamespaceAndPath("minecraft", "block"), "Spawn Anchor", true));
-            }
-
-            @Override
-            public java.util.List<GameTeamDefinition> createTeams(GameBootstrapConfig config) {
-                return java.util.List.of(new GameTeamDefinition(teamId, "Alpha", GameTeamColor.BLUE, true, true, Map.of()));
             }
         };
 
         GameManager.register(definition);
         try {
+            TeamManager.register(gameId, new com.myudog.myulib.api.team.TeamDefinition(teamId.getPath(), "Alpha", "blue", Map.of()));
             GameInstance<TestState> instance = GameManager.createInstance(gameId, new GameBootstrapConfig());
-            TestSupport.assertTrue(instance.objectBindings().getDefinition(objectId).isPresent());
-            TestSupport.assertTrue(instance.teams().getDefinition(teamId).isPresent());
-            TestSupport.assertEquals(0, instance.teams().playerCount(teamId));
+            TestSupport.assertTrue(instance.getFeatureOrCreate(com.myudog.myulib.api.game.feature.GameObjectBindingFeature.class).getDefinition(objectId).isPresent());
+            TestSupport.assertTrue(TeamManager.get("myulib:object_team_test:alpha_team") != null);
+            TestSupport.assertEquals(0, TeamManager.members("myulib:object_team_test:alpha_team").size());
             TestSupport.assertTrue(instance.hasSpecialObject(objectId));
             GameObjectHooks.tick(instance);
             GameManager.destroyInstance(instance.getInstanceId());
@@ -124,7 +113,7 @@ public final class GameFeatureTestSuite {
         }
     }
 
-    private enum TestState {
+    private enum TestState implements com.myudog.myulib.api.game.state.GameState {
         IDLE,
         RUNNING,
         FINISHED

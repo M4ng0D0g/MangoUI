@@ -14,6 +14,10 @@ public enum NoopConfigurationUiBridge implements ConfigurationUiBridge {
     }
 
     @Override
+    public void openRoleGroupEditor(String groupId) {
+    }
+
+    @Override
     public void openTeamEditor(String teamId) {
     }
 
@@ -21,4 +25,3 @@ public enum NoopConfigurationUiBridge implements ConfigurationUiBridge {
     public void openPermissionEditor(PermissionLayer layer, String scopeId) {
     }
 }
-

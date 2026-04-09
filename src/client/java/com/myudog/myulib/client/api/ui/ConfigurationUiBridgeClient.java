@@ -7,6 +7,7 @@ import java.util.Objects;
 public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge {
     private String lastFieldId;
     private String lastIdentityGroupId;
+    private String lastRoleGroupId;
     private String lastTeamId;
     private PermissionLayer lastPermissionLayer;
     private String lastPermissionScopeId;
@@ -19,6 +20,11 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
     @Override
     public void openIdentityGroupEditor(String groupId) {
         lastIdentityGroupId = Objects.requireNonNullElse(groupId, "");
+    }
+
+    @Override
+    public void openRoleGroupEditor(String groupId) {
+        lastRoleGroupId = Objects.requireNonNullElse(groupId, "");
     }
 
     @Override
@@ -40,6 +46,10 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
         return lastIdentityGroupId;
     }
 
+    public String lastRoleGroupId() {
+        return lastRoleGroupId;
+    }
+
     public String lastTeamId() {
         return lastTeamId;
     }
@@ -52,4 +62,3 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
         return lastPermissionScopeId;
     }
 }
-

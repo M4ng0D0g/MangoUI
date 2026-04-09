@@ -30,6 +30,13 @@ public final class ConfigurationUiRegistry {
         }
     }
 
+    public static void openRoleGroupEditor(String groupId) {
+        ConfigurationUiBridge current = bridge;
+        if (current != null) {
+            current.openRoleGroupEditor(groupId);
+        }
+    }
+
     public static void openTeamEditor(String teamId) {
         ConfigurationUiBridge current = bridge;
         if (current != null) {
@@ -44,4 +51,3 @@ public final class ConfigurationUiRegistry {
         }
     }
 }
-

@@ -7,6 +7,8 @@ public interface ConfigurationUiBridge {
 
     void openIdentityGroupEditor(String groupId);
 
+    void openRoleGroupEditor(String groupId);
+
     void openTeamEditor(String teamId);
 
     void openPermissionEditor(PermissionLayer layer, String scopeId);

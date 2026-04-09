@@ -1,5 +1,7 @@
 package com.myudog.myulib.api.game.logic;
 
+import com.myudog.myulib.api.game.state.GameState;
+
 import com.myudog.myulib.api.game.instance.GameInstance;
 import com.myudog.myulib.api.game.logic.facts.LogicFactsResolver;
 import com.myudog.myulib.api.game.timer.TimerModels.TimerSnapshot;
@@ -19,7 +21,7 @@ public final class LogicContracts {
     public interface LogicSignal {
     }
 
-    public record LogicContext<S extends Enum<S>>(GameInstance<S> instance, LogicSignal signal, LogicFactsResolver facts, S previousState, S currentState, TimerSnapshot timerSnapshot) {
+    public record LogicContext<S extends GameState>(GameInstance<S> instance, LogicSignal signal, LogicFactsResolver facts, S previousState, S currentState, TimerSnapshot timerSnapshot) {
         public Identifier gameId() {
             return instance == null ? null : instance.getDefinition().getId();
         }
@@ -30,16 +32,16 @@ public final class LogicContracts {
     }
 
     @FunctionalInterface
-    public interface LogicCondition<S extends Enum<S>> {
+    public interface LogicCondition<S extends GameState> {
         boolean test(LogicContext<S> context);
     }
 
     @FunctionalInterface
-    public interface LogicAction<S extends Enum<S>> {
+    public interface LogicAction<S extends GameState> {
         void execute(LogicContext<S> context);
     }
 
-    public record LogicRule<S extends Enum<S>>(String id, Class<? extends LogicSignal> signalType, List<LogicCondition<S>> conditions, List<LogicAction<S>> actions, int priority) {
+    public record LogicRule<S extends GameState>(String id, Class<? extends LogicSignal> signalType, List<LogicCondition<S>> conditions, List<LogicAction<S>> actions, int priority) {
         public LogicRule {
             id = Objects.requireNonNullElse(id, "");
             signalType = Objects.requireNonNull(signalType, "signalType");
@@ -52,7 +54,7 @@ public final class LogicContracts {
         }
     }
 
-    public record LogicRuleSet<S extends Enum<S>>(List<LogicRule<S>> rules) {
+    public record LogicRuleSet<S extends GameState>(List<LogicRule<S>> rules) {
         public LogicRuleSet {
             rules = rules == null ? List.of() : List.copyOf(rules);
         }
@@ -66,7 +68,7 @@ public final class LogicContracts {
         }
     }
 
-    public static final class LogicEventBus<S extends Enum<S>> {
+    public static final class LogicEventBus<S extends GameState> {
         private final List<Consumer<LogicSignal>> subscribers = new CopyOnWriteArrayList<>();
 
         public void subscribe(Consumer<LogicSignal> subscriber) {

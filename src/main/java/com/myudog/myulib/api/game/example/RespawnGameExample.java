@@ -13,64 +13,57 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.myudog.myulib.api.game.state.GameState;
 
-public class RespawnGameExample extends GameDefinition<RespawnGameExample.RespawnGameState> {
-    public enum RespawnGameState { WAITING, COUNTDOWN, ACTIVE, FINISHED }
+public class RespawnGameExample {
+    public enum RespawnGameState implements GameState { 
+        WAITING {
+            @Override
+            public <S extends GameState> void onEnter(GameInstance<S> instance, GameStateContext<S> context) {
+                instance.getFeatureOrCreate(GameScoreboardFeature.class).setLine(0, "Respawn game ready");
+                instance.getFeatureOrCreate(GameScoreboardFeature.class).setValue("players", 0);
+            }
+        }, 
+        COUNTDOWN, 
+        ACTIVE, 
+        FINISHED;
 
-    public RespawnGameExample() {
-        super(Identifier.fromNamespaceAndPath("myulib", "respawn_game"));
+        @Override
+        public <S extends GameState> void onTick(GameInstance<S> instance) {
+            instance.getFeatureOrCreate(GameScoreboardFeature.class).setValue("ticks", (int) instance.getTickCount());
+        }
+
+        @Override
+        public <S extends GameState> void onEnter(GameInstance<S> instance, GameStateContext<S> context) {
+            instance.getFeatureOrCreate(GameScoreboardFeature.class).setLine(1, "State: " + context.to());
+        }
     }
 
-    @Override
-    public RespawnGameState getInitialState() {
-        return RespawnGameState.WAITING;
-    }
+    public static GameDefinition<RespawnGameState> createDefinition() {
+        Map<RespawnGameState, Set<RespawnGameState>> transitions = new EnumMap<>(RespawnGameState.class);
+        transitions.put(RespawnGameState.WAITING, Set.of(RespawnGameState.COUNTDOWN, RespawnGameState.ACTIVE));
+        transitions.put(RespawnGameState.COUNTDOWN, Set.of(RespawnGameState.ACTIVE, RespawnGameState.FINISHED));
+        transitions.put(RespawnGameState.ACTIVE, Set.of(RespawnGameState.FINISHED));
+        transitions.put(RespawnGameState.FINISHED, Set.of(RespawnGameState.WAITING));
 
-    @Override
-    public Map<RespawnGameState, Set<RespawnGameState>> getAllowedTransitions() {
-        Map<RespawnGameState, Set<RespawnGameState>> map = new EnumMap<>(RespawnGameState.class);
-        map.put(RespawnGameState.WAITING, Set.of(RespawnGameState.COUNTDOWN, RespawnGameState.ACTIVE));
-        map.put(RespawnGameState.COUNTDOWN, Set.of(RespawnGameState.ACTIVE, RespawnGameState.FINISHED));
-        map.put(RespawnGameState.ACTIVE, Set.of(RespawnGameState.FINISHED));
-        map.put(RespawnGameState.FINISHED, Set.of(RespawnGameState.WAITING));
-        return map;
-    }
+        return new GameDefinition<>(
+            Identifier.fromNamespaceAndPath("myulib", "respawn_game"),
+            RespawnGameState.WAITING,
+            transitions
+        ) {
+            @Override
+            public Set<Identifier> getRequiredSpecialObjectIds() {
+                return Set.of(Identifier.fromNamespaceAndPath("myulib", "respawn_anchor"));
+            }
 
-    @Override
-    public Set<Identifier> getRequiredSpecialObjectIds() {
-        return Set.of(Identifier.fromNamespaceAndPath("myulib", "respawn_anchor"));
-    }
-
-    @Override
-    public List<GameFeature> createFeatures(GameBootstrapConfig config) {
-        GameScoreboardFeature scoreboard = new GameScoreboardFeature();
-        scoreboard.objectiveId = "respawn";
-        scoreboard.displayName = "Respawn";
-        GameTimerFeature timers = new GameTimerFeature();
-        return List.of(scoreboard, timers);
-    }
-
-    @Override
-    public void onCreate(GameInstance<RespawnGameState> instance) {
-        instance.scoreboard().setLine(0, "Respawn game ready");
-        instance.scoreboard().setValue("players", 0);
-    }
-
-    @Override
-    public void onEnterState(GameInstance<RespawnGameState> instance, GameStateContext<RespawnGameState> context) {
-        instance.scoreboard().setLine(1, "State: " + context.to());
-    }
-
-    @Override
-    public void onTick(GameInstance<RespawnGameState> instance) {
-        instance.scoreboard().setValue("ticks", (int) instance.getTickCount());
-    }
-
-    @Override
-    public void onDestroy(GameInstance<RespawnGameState> instance) {
-        instance.scoreboard().clear();
-        instance.timers().clear();
+            @Override
+            public List<GameFeature> createFeatures(GameBootstrapConfig config) {
+                GameScoreboardFeature scoreboard = new GameScoreboardFeature();
+                scoreboard.objectiveId = "respawn";
+                scoreboard.displayName = "Respawn";
+                GameTimerFeature timers = new GameTimerFeature();
+                return List.of(scoreboard, timers);
+            }
+        };
     }
 }
-
-

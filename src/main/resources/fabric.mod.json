@@ -22,6 +22,10 @@
       "com.myudog.myulib.client.MyulibClient"
     ]
   },
+  "mixins": [
+    "myulib.mixins.json",
+    "myulib.client.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.18.6",
     "minecraft": "~26.1",

@@ -1,106 +1,71 @@
 package com.myudog.myulib.api.identity;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import com.myudog.myulib.api.rolegroup.RoleGroupDefinition;
+import com.myudog.myulib.api.rolegroup.RoleGroupManager;
+
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
 public final class IdentityManager {
-    private static final Map<String, IdentityGroupDefinition> GROUPS = new LinkedHashMap<>();
-    private static final Map<UUID, Set<String>> PLAYER_GROUPS = new LinkedHashMap<>();
-
     private IdentityManager() {
     }
 
     public static void install() {
+        RoleGroupManager.install();
     }
 
     public static IdentityGroupDefinition register(IdentityGroupDefinition group) {
-        Objects.requireNonNull(group, "group");
-        GROUPS.put(group.id(), group);
-        return group;
+        RoleGroupDefinition created = RoleGroupManager.register(RoleGroupDefinition.fromIdentityDefinition(group));
+        return created.toIdentityDefinition();
     }
 
     public static IdentityGroupDefinition update(String groupId, UnaryOperator<IdentityGroupDefinition> updater) {
-        Objects.requireNonNull(groupId, "groupId");
-        Objects.requireNonNull(updater, "updater");
-        IdentityGroupDefinition existing = GROUPS.get(groupId);
-        if (existing == null) {
-            return null;
-        }
-        IdentityGroupDefinition updated = Objects.requireNonNull(updater.apply(existing), "updated group");
-        GROUPS.put(groupId, updated);
-        return updated;
+        RoleGroupDefinition updated = RoleGroupManager.update(groupId, current -> {
+            IdentityGroupDefinition identityCurrent = current.toIdentityDefinition();
+            IdentityGroupDefinition next = updater.apply(identityCurrent);
+            return next == null ? null : RoleGroupDefinition.fromIdentityDefinition(next);
+        });
+        return updated == null ? null : updated.toIdentityDefinition();
     }
 
     public static IdentityGroupDefinition unregister(String groupId) {
-        return GROUPS.remove(groupId);
+        RoleGroupDefinition removed = RoleGroupManager.delete(groupId);
+        return removed == null ? null : removed.toIdentityDefinition();
     }
 
     public static IdentityGroupDefinition get(String groupId) {
-        return GROUPS.get(groupId);
+        RoleGroupDefinition group = RoleGroupManager.get(groupId);
+        return group == null ? null : group.toIdentityDefinition();
     }
 
     public static List<IdentityGroupDefinition> groups() {
-        return List.copyOf(GROUPS.values());
+        return RoleGroupManager.groups().stream().map(RoleGroupDefinition::toIdentityDefinition).toList();
     }
 
     public static Map<String, IdentityGroupDefinition> snapshot() {
-        return Map.copyOf(GROUPS);
+        return RoleGroupManager.snapshot().entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> entry.getValue().toIdentityDefinition()));
     }
 
     public static boolean assign(UUID playerId, String groupId) {
-        Objects.requireNonNull(playerId, "playerId");
-        Objects.requireNonNull(groupId, "groupId");
-        if (!GROUPS.containsKey(groupId)) {
-            return false;
-        }
-        return PLAYER_GROUPS.computeIfAbsent(playerId, ignored -> new LinkedHashSet<>()).add(groupId);
+        return RoleGroupManager.assign(playerId, groupId);
     }
 
     public static boolean revoke(UUID playerId, String groupId) {
-        Set<String> groups = PLAYER_GROUPS.get(playerId);
-        if (groups == null) {
-            return false;
-        }
-        boolean removed = groups.remove(groupId);
-        if (groups.isEmpty()) {
-            PLAYER_GROUPS.remove(playerId);
-        }
-        return removed;
+        return RoleGroupManager.revoke(playerId, groupId);
     }
 
     public static Set<String> groupIdsOf(UUID playerId) {
-        Set<String> groups = PLAYER_GROUPS.get(playerId);
-        return groups == null ? Set.of() : Collections.unmodifiableSet(new LinkedHashSet<>(groups));
+        return RoleGroupManager.groupIdsOf(playerId);
     }
 
     public static List<IdentityGroupDefinition> groupsOf(UUID playerId) {
-        Set<String> groupIds = PLAYER_GROUPS.get(playerId);
-        if (groupIds == null || groupIds.isEmpty()) {
-            return List.of();
-        }
-        List<IdentityGroupDefinition> result = new ArrayList<>();
-        for (String groupId : groupIds) {
-            IdentityGroupDefinition definition = GROUPS.get(groupId);
-            if (definition != null) {
-                result.add(definition);
-            }
-        }
-        result.sort((a, b) -> Integer.compare(b.priority(), a.priority()));
-        return List.copyOf(result);
+        return RoleGroupManager.groupsOf(playerId).stream().map(RoleGroupDefinition::toIdentityDefinition).toList();
     }
 
     public static void clear() {
-        GROUPS.clear();
-        PLAYER_GROUPS.clear();
+        RoleGroupManager.clear();
     }
 }
-
-

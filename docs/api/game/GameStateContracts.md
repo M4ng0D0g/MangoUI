@@ -20,18 +20,14 @@
 `com.myudog.myulib.api.game.GameDefinition` 是 `com.myudog.myulib.api.game.state.GameDefinition` 的相容包裝。
 
 ### 主要方法
-- `getId()` / `getInitialState()` / `getAllowedTransitions()`
-- `getRequiredSpecialObjectIds()`
-- `createFeatures(config)`
-- `createLogicRules(config)`
-- `createRegions(config)`
-- `createComponentBindings(config)`
-- `createLogicFactsResolver(config)`
-- `onCreate(instance)` / `onExitState(instance, context)` / `onEnterState(instance, context)` / `onTick(instance)` / `onDestroy(instance)`
+- `getId()`
+- `getInitialState()`
+- `getAllowedTransitions()`
+- `createContext(...)`
 
 ### 補充
 - `isTransitionAllowed(from, to)`：根據 `allowedTransitions` 判斷是否可轉移
-- `validateBootstrap(config)`：檢查必要特殊物件是否存在
+- `GameDefinition` 不再承擔 `createXxx()` 模板式裝配；runtime 的組裝由 context 與對應系統入口負責。
 
 ## 用法
 ```java

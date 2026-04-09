@@ -1,10 +1,12 @@
 package com.myudog.myulib.api.game.feature;
 
+import com.myudog.myulib.api.game.state.GameState;
+
 import com.myudog.myulib.api.game.instance.GameInstance;
 import com.myudog.myulib.api.game.logic.LogicContracts;
 import com.myudog.myulib.api.game.logic.LogicEngine;
 
-public class GameLogicFeature<S extends Enum<S>> implements GameFeature {
+public class GameLogicFeature<S extends GameState> implements GameFeature {
     public final LogicEngine<S> engine;
 
     public GameLogicFeature() {

@@ -1,5 +1,7 @@
 package com.myudog.myulib.api.game.logic;
 
+import com.myudog.myulib.api.game.state.GameState;
+
 import com.myudog.myulib.api.game.instance.GameInstance;
 import com.myudog.myulib.api.game.logic.facts.LogicFactsResolver;
 import com.myudog.myulib.api.game.timer.TimerModels;
@@ -9,7 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class LogicEngine<S extends Enum<S>> {
+public class LogicEngine<S extends GameState> {
     private final List<LogicContracts.LogicRule<S>> rules = new ArrayList<>();
     private LogicFactsResolver factsResolver = LogicFactsResolver.DEFAULT;
     private GameInstance<S> instance;
