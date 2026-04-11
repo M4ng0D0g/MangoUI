@@ -1,7 +1,7 @@
-# GameBootstrapConfig API 參考
+# GameConfig API 參考
 
 ## 類別
-`record GameBootstrapConfig`
+`record GameConfig`
 
 ## 欄位
 - `specialObjects: Map<Identifier, GameObjectConfig>`：特殊物件的不可變快照
@@ -9,9 +9,9 @@
 
 ## 建構
 ```java
-new GameBootstrapConfig();
-new GameBootstrapConfig(Map.of(), Map.of());
-new GameBootstrapConfig(specialObjects, metadata);
+new GameConfig();
+new GameConfig(Map.of(), Map.of());
+new GameConfig(specialObjects, metadata);
 ```
 
 ## 行為
@@ -21,7 +21,7 @@ new GameBootstrapConfig(specialObjects, metadata);
 
 ## 用法
 ```java
-GameBootstrapConfig config = new GameBootstrapConfig(
+GameConfig config = new GameConfig(
     Map.of(
         Identifier.of("myulib", "respawn_anchor"),
         new GameObjectConfig(

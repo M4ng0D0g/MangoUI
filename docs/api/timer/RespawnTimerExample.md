@@ -1,14 +1,5 @@
-# RespawnTimerExample API 參考
-
-## 類別
-`class RespawnTimerExample`
-
-## 公開方法
-- `timer()`：回傳一個預設的 `TimerModels.Timer`
-- `payload(playerId, allowSkip)`：建立 `TimerModels.RespawnTimerPayload`
-
-## 用法
-```java
-TimerModels.Timer timer = RespawnTimerExample.timer();
-TimerModels.RespawnTimerPayload payload = RespawnTimerExample.payload(UUID.randomUUID(), false);
-```
+# Respawn timer example
+This example shows how to build a countdown timer and its payload with the current timer API.
+## Public helpers
+- `timer()` returns a countdown timer that triggers a remaining-tick callback.
+- `payload(UUID, boolean)` builds a respawn payload.

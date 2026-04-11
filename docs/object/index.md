@@ -1,18 +1,9 @@
-# Object System
-
-`Object` is the standalone system for runtime object definitions, hooks, and interactions.
-
-## Public API
-- [Object Core](../api/object/ObjectCore.md)
-- `com.myudog.myulib.api.game.object.GameObjectKind`
-- `com.myudog.myulib.api.game.object.GameObjectContext`
-- `com.myudog.myulib.api.game.object.GameObjectRuntime`
-- `com.myudog.myulib.api.game.object.GameObjectDefinition`
-- `com.myudog.myulib.api.game.object.GameObjectHooks`
-
+# Game object overview
+Game-object related types currently live under `com.myudog.myulib.api.game.object`.
+## Current public types
+- `GameObjectConfig`
+- `GameObjectKind`
+- `IGameEntity`
 ## Notes
-- The implementation currently lives under the `game.object` package for compatibility.
-- The docs treat object handling as an independent system so it can be separated from `game` over time.
-- Use the game docs only for the flow-level integration points.
-
-
+- There is no standalone `com.myudog.myulib.api.object` package in the current source tree.
+- Use the game docs for object configuration and runtime integration.

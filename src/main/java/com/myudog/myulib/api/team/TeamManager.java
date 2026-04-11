@@ -37,7 +37,7 @@ public final class TeamManager {
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(team, "team");
         String scopedId = scopedTeamId(gameId, team.id());
-        TeamDefinition scoped = new TeamDefinition(scopedId, team.displayName(), team.color(), team.metadata());
+        TeamDefinition scoped = new TeamDefinition(scopedId, team.displayName(), team.color(), team.flags());
         TEAMS.put(scoped.id(), scoped);
         TEAM_MEMBERS.computeIfAbsent(scoped.id(), ignored -> new LinkedHashSet<>());
         TEAM_GAME_IDS.put(scoped.id(), gameId.toString());

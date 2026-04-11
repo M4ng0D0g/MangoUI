@@ -1,8 +1,9 @@
-   package com.myudog.myulib.api.team;
+package com.myudog.myulib.api.team;
 
 import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ final class TeamManagerTest {
         TeamManager.clear();
 
         Identifier gameId = Identifier.fromNamespaceAndPath("myulib", "respawn_game");
-        TeamDefinition team = new TeamDefinition("blue", "Blue Team", "blue", Map.of("mode", "arena"));
+        TeamDefinition team = new TeamDefinition("blue", "Blue Team", TeamColor.BLUE, new EnumMap<>(TeamFlag.class));
         TeamDefinition scoped = TeamManager.register(gameId, team);
 
         assertEquals("myulib:respawn_game:blue", scoped.id());

@@ -1,13 +1,12 @@
 # Systems (legacy)
-
 This page is kept for backward compatibility.
-
-Canonical docs:
+## Canonical docs
 - `docs/ui/index.md`
 - `docs/animation/index.md`
 - `docs/game/index.md`
 - `docs/timer/index.md`
-- `docs/logic/index.md`
+- `docs/ecs/index.md`
+- `docs/event/index.md`
 - `docs/access/index.md`
 - `docs/rolegroup/index.md`
 - `docs/field/index.md`
