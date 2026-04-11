@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.ui;
 
-import com.myudog.myulib.api.permission.PermissionLayer;
+import com.myudog.myulib.api.permission.ScopeLayer;
 
 public enum NoopConfigurationUiBridge implements ConfigurationUiBridge {
     INSTANCE;
@@ -22,6 +22,6 @@ public enum NoopConfigurationUiBridge implements ConfigurationUiBridge {
     }
 
     @Override
-    public void openPermissionEditor(PermissionLayer layer, String scopeId) {
+    public void openPermissionEditor(ScopeLayer layer, String scopeId) {
     }
 }

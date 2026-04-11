@@ -1,60 +1,52 @@
 package com.myudog.myulib.api.command;
-
+import com.myudog.myulib.api.field.FieldDefinition;
+import com.myudog.myulib.api.field.FieldManager;
+import com.myudog.myulib.api.permission.PermissionAction;
+import com.myudog.myulib.api.permission.PermissionDecision;
+import com.myudog.myulib.api.permission.PermissionManager;
 import com.myudog.myulib.api.rolegroup.RoleGroupManager;
-import com.myudog.myulib.api.ui.ConfigurationUiRegistry;
-import com.myudog.myulib.api.ui.NoopConfigurationUiBridge;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
 import java.nio.file.Path;
 import java.util.Map;
-
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.AABB;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 final class AccessCommandServiceTest {
-
     @TempDir
     Path tempDir;
-
     @Test
-    void rolegroupCommandsAreRegisteredAndExecuteCrud() {
+    void accessServiceHelpersCreateAndPersistAccessData() {
         RoleGroupManager.clear();
+        PermissionManager.clear();
+        FieldManager.clear();
         RoleGroupManager.bindRoot(tempDir);
-        ConfigurationUiRegistry.setBridge(NoopConfigurationUiBridge.INSTANCE);
-        CommandRegistry.clear();
-        AccessCommandService.registerDefaults();
-
-        assertTrue(CommandRegistry.snapshot().containsKey("rolegroup.create"));
-        assertTrue(CommandRegistry.snapshot().containsKey("rolegroup.update"));
-        assertTrue(CommandRegistry.snapshot().containsKey("rolegroup.delete"));
-        assertTrue(CommandRegistry.snapshot().containsKey("rolegroup.get"));
-        assertTrue(CommandRegistry.snapshot().containsKey("rolegroup.list"));
-
-        CommandResult created = CommandRegistry.execute(new CommandContext("console", "rolegroup.create", Map.of(
-            "id", "builders",
-            "name", "Builders",
-            "priority", "7"
-        )));
-        assertTrue(created.success());
-        assertEquals("Builders", RoleGroupManager.get("builders").displayName());
-
-        CommandResult updated = CommandRegistry.execute(new CommandContext("console", "rolegroup.update", Map.of(
-            "id", "builders",
-            "name", "Master Builders",
-            "priority", "9"
-        )));
-        assertTrue(updated.success());
-        assertEquals("Master Builders", RoleGroupManager.get("builders").displayName());
-        assertEquals(9, RoleGroupManager.get("builders").priority());
-
-        CommandResult listed = CommandRegistry.execute(new CommandContext("console", "rolegroup.list", Map.of()));
-        assertTrue(listed.success());
-        assertTrue(listed.message().contains("builders"));
-
-        CommandResult deleted = CommandRegistry.execute(new CommandContext("console", "rolegroup.delete", Map.of("id", "builders")));
-        assertTrue(deleted.success());
-        assertNull(RoleGroupManager.get("builders"));
+        assertDoesNotThrow(AccessCommandService::registerDefaults,
+                "registerDefaults should only attach the command callback");
+        AccessCommandService.createRoleGroup("builders", "Builders", 7);
+        assertEquals("Builders", RoleGroupManager.get("builders").displayName(),
+                "createRoleGroup should register the new group");
+        AccessCommandService.grantGlobalPermission("builders", PermissionAction.BLOCK_PLACE, PermissionDecision.ALLOW);
+        assertEquals(PermissionDecision.ALLOW,
+                PermissionManager.global().forGroup("builders").get(PermissionAction.BLOCK_PLACE),
+                "grantGlobalPermission should update the global permission table");
+        Identifier fieldId = Identifier.fromNamespaceAndPath("tests", "spawn");
+        FieldDefinition field = new FieldDefinition(
+                fieldId,
+                Identifier.fromNamespaceAndPath("minecraft", "overworld"),
+                new AABB(0, 0, 0, 10, 10, 10),
+                Map.of("label", "Spawn")
+        );
+        AccessCommandService.createField(field);
+        assertEquals(field, FieldManager.get(fieldId), "createField should register the field");
+        assertTrue(AccessCommandService.listRoleGroups().stream().anyMatch(group -> group.id().equals("builders")),
+                "listRoleGroups should include the created group");
+        AccessCommandService.deleteField(fieldId);
+        AccessCommandService.deleteRoleGroup("builders");
+        assertNull(FieldManager.get(fieldId), "deleteField should remove the field");
+        assertNull(RoleGroupManager.get("builders"), "deleteRoleGroup should remove the role group");
     }
 }

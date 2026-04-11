@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.ui;
 
-import com.myudog.myulib.api.permission.PermissionLayer;
+import com.myudog.myulib.api.permission.ScopeLayer;
 
 public interface ConfigurationUiBridge {
     void openFieldEditor(String fieldId);
@@ -11,6 +11,6 @@ public interface ConfigurationUiBridge {
 
     void openTeamEditor(String teamId);
 
-    void openPermissionEditor(PermissionLayer layer, String scopeId);
+    void openPermissionEditor(ScopeLayer layer, String scopeId);
 }
 

@@ -1,8 +1,5 @@
 package com.myudog.myulib.api.rolegroup;
 
-import com.myudog.myulib.api.permission.PermissionDecision;
-import com.myudog.myulib.api.permission.PermissionGrant;
-import com.myudog.myulib.api.permission.PermissionLayer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.NbtIo;
@@ -10,7 +7,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.server.MinecraftServer;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -192,6 +188,18 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
     }
 
     @Override
+    public synchronized Set<UUID> getPlayersInGroup(String groupId) {
+        ensureLoaded();
+        Set<UUID> result = new LinkedHashSet<>();
+        for (Map.Entry<UUID, Set<String>> entry : playerGroups.entrySet()) {
+            if (entry.getValue().contains(groupId)) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    @Override
     public synchronized void clear() {
         groups.clear();
         playerGroups.clear();
@@ -199,7 +207,7 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
         dirty = false;
     }
 
-    private void markDirty() {
+    public void markDirty() {
         dirty = true;
         saveIfBound();
     }
@@ -274,17 +282,13 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
         }
     }
 
+    // --- NBT 轉換邏輯 ---
+
     private static RoleGroupDefinition readGroup(CompoundTag compound) {
         String id = compound.getString("id").orElse("");
         String displayName = compound.getString("displayName").orElse(id);
         int priority = compound.getInt("priority").orElse(0);
-        List<PermissionGrant> grants = new ArrayList<>();
-        Tag grantsElement = compound.get("grants");
-        if (grantsElement instanceof ListTag grantsList) {
-            for (int i = 0; i < grantsList.size(); i++) {
-                grants.add(readGrant(grantsList.getCompound(i).orElseThrow()));
-            }
-        }
+
         Map<String, String> metadata = new LinkedHashMap<>();
         Tag metadataElement = compound.get("metadata");
         if (metadataElement instanceof CompoundTag metadataCompound) {
@@ -292,7 +296,15 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
                 metadata.put(key, metadataCompound.getString(key).orElse(""));
             }
         }
-        return new RoleGroupDefinition(id, displayName, priority, grants, metadata);
+
+        Set<UUID> members = new LinkedHashSet<>();
+        Tag membersElement = compound.get("members");
+        if (membersElement instanceof CompoundTag membersCompound) {
+            for (String playerKey : keysOf(membersCompound)) {
+                members.add(UUID.fromString(playerKey));
+            }
+        }
+        return new RoleGroupDefinition(id, displayName, priority, metadata, members);
     }
 
     private static CompoundTag writeGroup(RoleGroupDefinition group) {
@@ -300,11 +312,7 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
         compound.putString("id", group.id());
         compound.putString("displayName", group.displayName());
         compound.putInt("priority", group.priority());
-        ListTag grantsList = new ListTag();
-        for (PermissionGrant grant : group.grants()) {
-            grantsList.add(writeGrant(grant));
-        }
-        compound.put("grants", grantsList);
+
         CompoundTag metadataCompound = new CompoundTag();
         for (Map.Entry<String, String> entry : group.metadata().entrySet()) {
             metadataCompound.putString(entry.getKey(), entry.getValue());
@@ -313,25 +321,7 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
         return compound;
     }
 
-    private static PermissionGrant readGrant(CompoundTag compound) {
-        return new PermissionGrant(
-            compound.getString("id").orElse(""),
-            PermissionLayer.valueOf(compound.getString("layer").orElseThrow()),
-            compound.getString("node").orElse("*"),
-            PermissionDecision.valueOf(compound.getString("decision").orElseThrow()),
-            compound.getInt("priority").orElse(0)
-        );
-    }
-
-    private static CompoundTag writeGrant(PermissionGrant grant) {
-        CompoundTag compound = new CompoundTag();
-        compound.putString("id", grant.id());
-        compound.putString("layer", grant.layer().name());
-        compound.putString("node", grant.node());
-        compound.putString("decision", grant.decision().name());
-        compound.putInt("priority", grant.priority());
-        return compound;
-    }
+    // --- 底層反射讀寫與路徑解析 ---
 
     private static CompoundTag readRoot(Path path) throws Exception {
         Method method = findNbtIoMethod("readCompressed", path);
@@ -546,6 +536,3 @@ final class NbtRoleGroupStorage implements RoleGroupStorage {
         return null;
     }
 }
-
-
-

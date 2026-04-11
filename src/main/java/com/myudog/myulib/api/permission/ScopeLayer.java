@@ -1,12 +1,12 @@
 package com.myudog.myulib.api.permission;
 
-public enum PermissionLayer {
+public enum ScopeLayer {
     GLOBAL,
     DIMENSION,
     FIELD,
     USER;
 
-    public boolean isHigherThan(PermissionLayer other) {
+    public boolean isHigherThan(ScopeLayer other) {
         return other != null && ordinal() > other.ordinal();
     }
 }

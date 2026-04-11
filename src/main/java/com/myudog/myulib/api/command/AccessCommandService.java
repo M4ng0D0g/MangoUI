@@ -1,194 +1,101 @@
 package com.myudog.myulib.api.command;
 
-import com.myudog.myulib.api.field.FieldAdminService;
+import com.mojang.brigadier.CommandDispatcher;
 import com.myudog.myulib.api.field.FieldDefinition;
-import com.myudog.myulib.api.identity.IdentityAdminService;
-import com.myudog.myulib.api.identity.IdentityGroupDefinition;
-import com.myudog.myulib.api.permission.PermissionAdminService;
-import com.myudog.myulib.api.permission.PermissionContext;
-import com.myudog.myulib.api.permission.PermissionGrant;
-import com.myudog.myulib.api.permission.PermissionLayer;
-import com.myudog.myulib.api.permission.PermissionResolution;
-import com.myudog.myulib.api.rolegroup.RoleGroupAdminService;
+import com.myudog.myulib.api.field.FieldManager;
+import com.myudog.myulib.api.permission.PermissionAction;
+import com.myudog.myulib.api.permission.PermissionDecision;
+import com.myudog.myulib.api.permission.PermissionManager;
 import com.myudog.myulib.api.rolegroup.RoleGroupDefinition;
 import com.myudog.myulib.api.rolegroup.RoleGroupManager;
-import com.myudog.myulib.api.team.TeamAdminService;
-import com.myudog.myulib.api.team.TeamDefinition;
-import com.myudog.myulib.api.ui.ConfigurationUiBridge;
-import com.myudog.myulib.api.ui.ConfigurationUiRegistry;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
+
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 
-public final class AccessCommandService {
-    private AccessCommandService() {
-    }
-
-    public static CommandResult createField(FieldDefinition field) {
-        FieldAdminService.create(field);
-        return CommandResult.success("Field created: " + field.id());
-    }
-
-    public static CommandResult updateField(String fieldId, UnaryOperator<FieldDefinition> updater) {
-        return FieldAdminService.update(fieldId, updater) != null
-            ? CommandResult.success("Field updated: " + fieldId)
-            : CommandResult.failure("Missing field: " + fieldId);
-    }
-
-    public static CommandResult deleteField(String fieldId) {
-        return FieldAdminService.delete(fieldId) != null
-            ? CommandResult.success("Field deleted: " + fieldId)
-            : CommandResult.failure("Missing field: " + fieldId);
-    }
-
-    public static CommandResult openFieldEditor(String fieldId, ConfigurationUiBridge ui) {
-        FieldAdminService.openEditor(fieldId, ui);
-        return CommandResult.success("Open field editor: " + fieldId);
-    }
-
-    public static CommandResult createIdentityGroup(IdentityGroupDefinition group) {
-        IdentityAdminService.create(group);
-        return CommandResult.success("Identity group created: " + group.id());
-    }
-
-    public static CommandResult updateIdentityGroup(String groupId, UnaryOperator<IdentityGroupDefinition> updater) {
-        return IdentityAdminService.update(groupId, updater) != null
-            ? CommandResult.success("Identity group updated: " + groupId)
-            : CommandResult.failure("Missing identity group: " + groupId);
-    }
-
-    public static CommandResult deleteIdentityGroup(String groupId) {
-        return IdentityAdminService.delete(groupId) != null
-            ? CommandResult.success("Identity group deleted: " + groupId)
-            : CommandResult.failure("Missing identity group: " + groupId);
-    }
-
-    public static CommandResult openIdentityGroupEditor(String groupId, ConfigurationUiBridge ui) {
-        IdentityAdminService.openEditor(groupId, ui);
-        return CommandResult.success("Open identity editor: " + groupId);
-    }
-
-    public static CommandResult createRoleGroup(String groupId, String displayName, int priority) {
-        RoleGroupDefinition group = new RoleGroupDefinition(groupId, displayName, priority, List.of(), Map.of());
-        RoleGroupAdminService.create(group);
-        return CommandResult.success("Role group created: " + group.id());
-    }
-
-    public static CommandResult updateRoleGroup(String groupId, String displayName, Integer priority) {
-        RoleGroupDefinition updated = RoleGroupAdminService.update(groupId, current -> new RoleGroupDefinition(
-            current.id(),
-            displayName == null || displayName.isBlank() ? current.displayName() : displayName,
-            priority == null ? current.priority() : priority,
-            current.grants(),
-            current.metadata()
-        ));
-        return updated != null
-            ? CommandResult.success("Role group updated: " + updated.id())
-            : CommandResult.failure("Missing role group: " + groupId);
-    }
-
-    public static CommandResult deleteRoleGroup(String groupId) {
-        return RoleGroupAdminService.delete(groupId) != null
-            ? CommandResult.success("Role group deleted: " + groupId)
-            : CommandResult.failure("Missing role group: " + groupId);
-    }
-
-    public static CommandResult getRoleGroup(String groupId) {
-        RoleGroupDefinition group = RoleGroupManager.get(groupId);
-        return group == null
-            ? CommandResult.failure("Missing role group: " + groupId)
-            : CommandResult.success(formatRoleGroup(group));
-    }
-
-    public static CommandResult listRoleGroups() {
-        List<RoleGroupDefinition> groups = RoleGroupManager.list();
-        if (groups.isEmpty()) {
-            return CommandResult.success("Role groups: (none)");
-        }
-        String summary = groups.stream().map(group -> group.id() + "=" + group.displayName()).collect(Collectors.joining(", "));
-        return CommandResult.success("Role groups: " + summary);
-    }
-
-    public static CommandResult openRoleGroupEditor(String groupId, ConfigurationUiBridge ui) {
-        RoleGroupAdminService.openEditor(groupId, ui);
-        return CommandResult.success("Open role group editor: " + groupId);
-    }
-
-    public static CommandResult createTeam(TeamDefinition team) {
-        TeamAdminService.create(team);
-        return CommandResult.success("Team created: " + team.id());
-    }
-
-    public static CommandResult updateTeam(String teamId, UnaryOperator<TeamDefinition> updater) {
-        return TeamAdminService.update(teamId, updater) != null
-            ? CommandResult.success("Team updated: " + teamId)
-            : CommandResult.failure("Missing team: " + teamId);
-    }
-
-    public static CommandResult deleteTeam(String teamId) {
-        return TeamAdminService.delete(teamId) != null
-            ? CommandResult.success("Team deleted: " + teamId)
-            : CommandResult.failure("Missing team: " + teamId);
-    }
-
-    public static CommandResult openTeamEditor(String teamId, ConfigurationUiBridge ui) {
-        TeamAdminService.openEditor(teamId, ui);
-        return CommandResult.success("Open team editor: " + teamId);
-    }
-
-    public static CommandResult grantPermission(PermissionLayer layer, String scopeId, PermissionGrant grant, UUID playerId) {
-        switch (layer) {
-            case GLOBAL -> PermissionAdminService.grantGlobal(grant);
-            case DIMENSION -> PermissionAdminService.grantDimension(scopeId, grant);
-            case FIELD -> PermissionAdminService.grantField(scopeId, grant);
-            case USER -> PermissionAdminService.grantUser(playerId, grant);
-        }
-        return CommandResult.success("Permission granted: " + grant.id());
-    }
-
-    public static CommandResult evaluatePermission(PermissionContext context) {
-        PermissionResolution resolution = PermissionAdminService.evaluate(context);
-        return CommandResult.success(resolution.decision().name());
-    }
+public class AccessCommandService {
 
     public static void registerDefaults() {
-        CommandRegistry.register("field.open", ctx -> openFieldEditor(ctx.arguments().getOrDefault("id", ""), ConfigurationUiRegistry.bridge()));
-        CommandRegistry.register("identity.open", ctx -> openIdentityGroupEditor(ctx.arguments().getOrDefault("id", ""), ConfigurationUiRegistry.bridge()));
-        CommandRegistry.register("rolegroup.create", ctx -> createRoleGroup(
-            ctx.arguments().getOrDefault("id", ""),
-            ctx.arguments().getOrDefault("name", ctx.arguments().getOrDefault("displayName", ctx.arguments().getOrDefault("id", ""))),
-            parseInt(ctx.arguments().getOrDefault("priority", "0"), 0)
-        ));
-        CommandRegistry.register("rolegroup.update", ctx -> updateRoleGroup(
-            ctx.arguments().getOrDefault("id", ""),
-            ctx.arguments().get("name"),
-            ctx.arguments().containsKey("priority") ? parseInt(ctx.arguments().get("priority"), 0) : null
-        ));
-        CommandRegistry.register("rolegroup.delete", ctx -> deleteRoleGroup(ctx.arguments().getOrDefault("id", "")));
-        CommandRegistry.register("rolegroup.get", ctx -> getRoleGroup(ctx.arguments().getOrDefault("id", "")));
-        CommandRegistry.register("rolegroup.list", ctx -> listRoleGroups());
-        CommandRegistry.register("rolegroup.open", ctx -> openRoleGroupEditor(ctx.arguments().getOrDefault("id", ""), ConfigurationUiRegistry.bridge()));
-        CommandRegistry.register("team.open", ctx -> openTeamEditor(ctx.arguments().getOrDefault("id", ""), ConfigurationUiRegistry.bridge()));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            // 這裡呼叫了下方實作的指令樹
+            registerMyulibBaseCommand(dispatcher);
+        });
     }
 
-    private static String formatRoleGroup(RoleGroupDefinition group) {
-        return "Role group{" +
-            "id='" + group.id() + '\'' +
-            ", name='" + group.displayName() + '\'' +
-            ", priority=" + group.priority() +
-            ", grants=" + group.grants().size() +
-            ", metadata=" + group.metadata().size() +
-            '}';
+    /**
+     * 🛠️ 實作基礎的 /myulib 指令樹 (解決 cannot find symbol 錯誤)
+     */
+    private static void registerMyulibBaseCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
+
+        dispatcher.register(Commands.literal("myulib")
+                        .requires(source -> source.permissions().hasPermission(
+                                new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS)
+                        )) // 需要管理員權限 (OP 等級 2)
+
+                        // 子指令：/myulib save (強制手動存檔)
+                        .then(Commands.literal("save")
+                                .executes(context -> {
+                                    PermissionManager.save();
+                                    FieldManager.save();
+                                    RoleGroupManager.save();
+
+                                    context.getSource().sendSuccess(
+                                            () -> Component.literal("§a[Myulib] 所有資料已成功手動寫入 NBT 存檔！"),
+                                            true
+                                    );
+                                    return 1;
+                                })
+                        )
+                // 未來你的 `/myulib group create <id>` 等指令都可以繼續掛在這裡
+                // 並在 executes 內呼叫下方的 Service 方法
+        );
     }
 
-    private static int parseInt(String value, int fallback) {
-        try {
-            return Integer.parseInt(value);
-        } catch (Exception ignored) {
-            return fallback;
-        }
+    // ====================================================================
+    // 以下為內部服務封裝 (Service Layer)，供指令或外部 API 呼叫
+    // ====================================================================
+
+    // --- RoleGroup (身分組) ---
+    public static void createRoleGroup(String groupId, String displayName, int priority) {
+        RoleGroupDefinition group = new RoleGroupDefinition(groupId, displayName, priority, Map.of(), Set.of());
+        RoleGroupManager.register(group);
+        RoleGroupManager.save(); // 💡 新增資料後觸發存檔
+    }
+
+    public static void deleteRoleGroup(String groupId) {
+        RoleGroupManager.delete(groupId);
+        RoleGroupManager.save(); // 💡 刪除資料後觸發存檔
+    }
+
+    public static List<RoleGroupDefinition> listRoleGroups() {
+        return RoleGroupManager.groups();
+    }
+
+    // --- Permission (權限) ---
+    public static void grantGlobalPermission(String groupId, PermissionAction action, PermissionDecision decision) {
+        PermissionManager.global().forGroup(groupId).set(action, decision);
+        PermissionManager.save();
+    }
+
+    // --- Field (保護區) ---
+    public static void createField(FieldDefinition field) {
+        FieldManager.register(field);
+        // FieldManager 內部的 NbtFieldStorage 在 add() 時預設已經會 markDirty()
+        // 但安全起見可以統一呼叫，不會有額外效能負擔
+        FieldManager.save();
+    }
+
+    public static void deleteField(Identifier fieldId) {
+        FieldManager.unregister(fieldId);
+        FieldManager.save();
     }
 }
-

@@ -1,6 +1,6 @@
 package com.myudog.myulib.client.api.ui;
 
-import com.myudog.myulib.api.permission.PermissionLayer;
+import com.myudog.myulib.api.permission.ScopeLayer;
 import com.myudog.myulib.api.ui.ConfigurationUiBridge;
 import java.util.Objects;
 
@@ -9,7 +9,7 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
     private String lastIdentityGroupId;
     private String lastRoleGroupId;
     private String lastTeamId;
-    private PermissionLayer lastPermissionLayer;
+    private ScopeLayer lastPermissionLayer;
     private String lastPermissionScopeId;
 
     @Override
@@ -33,7 +33,7 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
     }
 
     @Override
-    public void openPermissionEditor(PermissionLayer layer, String scopeId) {
+    public void openPermissionEditor(ScopeLayer layer, String scopeId) {
         lastPermissionLayer = layer;
         lastPermissionScopeId = Objects.requireNonNullElse(scopeId, "");
     }
@@ -54,7 +54,7 @@ public final class ConfigurationUiBridgeClient implements ConfigurationUiBridge 
         return lastTeamId;
     }
 
-    public PermissionLayer lastPermissionLayer() {
+    public ScopeLayer lastPermissionLayer() {
         return lastPermissionLayer;
     }
 

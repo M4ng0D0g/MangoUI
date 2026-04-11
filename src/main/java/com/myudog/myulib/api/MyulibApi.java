@@ -2,7 +2,6 @@ package com.myudog.myulib.api;
 
 import com.myudog.myulib.api.field.FieldManager;
 import com.myudog.myulib.api.game.GameManager;
-import com.myudog.myulib.api.identity.IdentityManager;
 import com.myudog.myulib.api.rolegroup.RoleGroupManager;
 import com.myudog.myulib.api.camera.CameraApi;
 import com.myudog.myulib.api.permission.PermissionManager;
@@ -20,7 +19,6 @@ public final class MyulibApi {
 		AccessSystems.init();
 		FieldManager.install();
 		TeamManager.install();
-		IdentityManager.install();
 		RoleGroupManager.install();
 		PermissionManager.install();
 	}

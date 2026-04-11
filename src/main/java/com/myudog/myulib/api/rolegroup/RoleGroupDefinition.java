@@ -1,32 +1,25 @@
 package com.myudog.myulib.api.rolegroup;
 
-import com.myudog.myulib.api.identity.IdentityGroupDefinition;
-import com.myudog.myulib.api.permission.PermissionGrant;
-
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 public record RoleGroupDefinition(
-    String id,
-    String displayName,
-    int priority,
-    List<PermissionGrant> grants,
-    Map<String, String> metadata
+        String id,
+        String displayName,
+        int priority, // 數值越大，覆蓋權限的優先級越高
+        Map<String, String> metadata,
+        Set<UUID> members
 ) {
     public RoleGroupDefinition {
-        id = Objects.requireNonNull(id, "id");
+        id = Objects.requireNonNull(id, "id 不得為空");
         displayName = displayName == null ? id : displayName;
-        grants = grants == null ? List.of() : List.copyOf(grants);
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+        members = members == null ? Set.of() : Set.copyOf(members);
     }
 
-    public IdentityGroupDefinition toIdentityDefinition() {
-        return new IdentityGroupDefinition(id, displayName, priority, grants, metadata);
-    }
-
-    public static RoleGroupDefinition fromIdentityDefinition(IdentityGroupDefinition definition) {
-        Objects.requireNonNull(definition, "definition");
-        return new RoleGroupDefinition(definition.id(), definition.displayName(), definition.priority(), definition.grants(), definition.metadata());
+    public boolean hasMember(UUID playerId) {
+        return members != null && members.contains(playerId);
     }
 }

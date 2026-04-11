@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.ui;
 
-import com.myudog.myulib.api.permission.PermissionLayer;
+import com.myudog.myulib.api.permission.ScopeLayer;
 
 public final class ConfigurationUiRegistry {
     private static volatile ConfigurationUiBridge bridge;
@@ -44,7 +44,7 @@ public final class ConfigurationUiRegistry {
         }
     }
 
-    public static void openPermissionEditor(PermissionLayer layer, String scopeId) {
+    public static void openPermissionEditor(ScopeLayer layer, String scopeId) {
         ConfigurationUiBridge current = bridge;
         if (current != null) {
             current.openPermissionEditor(layer, scopeId);
