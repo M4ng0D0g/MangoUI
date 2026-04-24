@@ -18,7 +18,7 @@ public final class CameraApi {
             return;
         }
         CameraDispatchBridge.dispatch(player, CameraActionPayload.shake(intensity, durationMillis));
-        DebugLogManager.log(DebugFeature.CAMERA,
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA,
                 "shake player=" + player.getName().getString() + ",intensity=" + intensity + ",duration=" + durationMillis);
     }
 
@@ -29,7 +29,7 @@ public final class CameraApi {
         // 🌟 修正重點：不再這裡提早 resolvePosition()，因為伺服器端不負責渲染計算！
         // 直接將完整的 target 打包，讓客戶端收到封包後自己每一幀去 resolve 最新座標
         CameraDispatchBridge.dispatch(player, CameraActionPayload.moveTo(target, durationMillis, easing));
-        DebugLogManager.log(DebugFeature.CAMERA,
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA,
                 "moveTo player=" + player.getName().getString() + ",duration=" + durationMillis + ",easing=" + easing + ",target=" + target);
     }
 
@@ -38,13 +38,13 @@ public final class CameraApi {
             return;
         }
         CameraDispatchBridge.dispatch(player, CameraActionPayload.reset());
-        DebugLogManager.log(DebugFeature.CAMERA,
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA,
                 "reset player=" + player.getName().getString());
     }
 
     public static void shakeLocal(float intensity, long durationMillis) {
         CameraDispatchBridge.applyLocal(CameraActionPayload.shake(intensity, durationMillis));
-        DebugLogManager.log(DebugFeature.CAMERA,
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA,
                 "shakeLocal intensity=" + intensity + ",duration=" + durationMillis);
     }
 
@@ -52,12 +52,12 @@ public final class CameraApi {
         Objects.requireNonNull(target, "target");
         // 🌟 本地端動畫也是一樣，把 target 原封不動交給 Modifier 去即時解析
         CameraDispatchBridge.applyLocal(CameraActionPayload.moveTo(target, durationMillis, easing));
-        DebugLogManager.log(DebugFeature.CAMERA,
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA,
                 "moveToLocal duration=" + durationMillis + ",easing=" + easing + ",target=" + target);
     }
 
     public static void resetLocal() {
         CameraDispatchBridge.applyLocal(CameraActionPayload.reset());
-        DebugLogManager.log(DebugFeature.CAMERA, "resetLocal");
+        DebugLogManager.INSTANCE.log(DebugFeature.CAMERA, "resetLocal");
     }
 }

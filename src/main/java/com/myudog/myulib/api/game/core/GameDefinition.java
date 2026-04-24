@@ -6,7 +6,6 @@ import com.myudog.myulib.internal.event.EventDispatcherImpl;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -19,6 +18,14 @@ public abstract class GameDefinition<C extends GameConfig, D extends GameData, S
 
     public final Identifier getId() {
         return id;
+    }
+
+    public String gameToken() {
+        return id.getPath();
+    }
+
+    public String modToken() {
+        return id.getNamespace();
     }
 
     // --- 抽象工廠方法 (供開發者實作) ---
@@ -39,12 +46,19 @@ public abstract class GameDefinition<C extends GameConfig, D extends GameData, S
      */
     protected abstract EventDispatcherImpl createEventBus();
 
-    /**
-     * 核心生命週期：在此處掛載遊戲行為規則。
-     */
-    protected List<GameBehavior<C, D, S>> gameBehaviors() {
-        return List.of();
+    public final void init(GameInstance<C, D, S> instance) throws Exception {
+        Objects.requireNonNull(instance, "instance");
+        bindBehavior(instance);
     }
+
+    public final void clean(GameInstance<C, D, S> instance) throws Exception {
+        Objects.requireNonNull(instance, "instance");
+        unbindBehavior(instance);
+    }
+
+    protected abstract void bindBehavior(GameInstance<C, D, S> instance) throws Exception;
+
+    protected abstract void unbindBehavior(GameInstance<C, D, S> instance) throws Exception;
 
     protected Identifier resolveTeamForJoin(GameInstance<C, D, S> instance, UUID playerUuid, Identifier requestedTeamId) {
         return requestedTeamId;
@@ -53,14 +67,7 @@ public abstract class GameDefinition<C extends GameConfig, D extends GameData, S
     protected void onStart(GameInstance<C, D, S> instance) throws Exception {
     }
 
-    protected void onEnd(GameInstance<C, D, S> instance) throws Exception {
-    }
-
-    /**
-     * @deprecated 請改用 gameBehaviors()，保留作相容橋接。
-     */
-    @Deprecated
-    public void bindBehaviors(GameInstance<C, D, S> instance) {
+    protected void onShutDown(GameInstance<C, D, S> instance) throws Exception {
     }
 
     // --- 主建構流程 (不可被覆寫) ---

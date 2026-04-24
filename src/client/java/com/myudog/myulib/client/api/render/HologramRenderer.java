@@ -26,7 +26,7 @@
 //    }
 //
 //    private static void onRender(WorldRenderContext context) {
-//        List<HologramDefinition> holograms = HologramClientManager.getActiveHolograms();
+//        List<HologramDefinition> holograms = HologramClientManager.INSTANCE.getActiveHolograms();
 //        if (holograms.isEmpty()) return;
 //
 //        MatrixStack matrices = context.matrixStack();

@@ -8,30 +8,34 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DebugTraceManager {
-    private static final Set<UUID> ENABLED = ConcurrentHashMap.newKeySet();
-    private static final Map<UUID, StringBuilder> ACTIVE = new ConcurrentHashMap<>();
+
+    public static final DebugTraceManager INSTANCE = new DebugTraceManager();
+
+    
+    private final Set<UUID> ENABLED = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, StringBuilder> ACTIVE = new ConcurrentHashMap<>();
 
     private DebugTraceManager() {
     }
 
-    public static void enable(UUID playerId) {
+    public void enable(UUID playerId) {
         if (playerId != null) {
             ENABLED.add(playerId);
         }
     }
 
-    public static void disable(UUID playerId) {
+    public void disable(UUID playerId) {
         if (playerId != null) {
             ENABLED.remove(playerId);
             ACTIVE.remove(playerId);
         }
     }
 
-    public static boolean isEnabled(UUID playerId) {
+    public boolean isEnabled(UUID playerId) {
         return playerId != null && ENABLED.contains(playerId);
     }
 
-    public static void begin(ServerPlayer player, String title) {
+    public void begin(ServerPlayer player, String title) {
         if (player == null || !isEnabled(player.getUUID())) {
             return;
         }
@@ -40,7 +44,7 @@ public final class DebugTraceManager {
         ACTIVE.put(player.getUUID(), builder);
     }
 
-    public static void step(ServerPlayer player, String line) {
+    public void step(ServerPlayer player, String line) {
         if (player == null || !isEnabled(player.getUUID())) {
             return;
         }
@@ -48,7 +52,7 @@ public final class DebugTraceManager {
         builder.append("- ").append(line == null ? "-" : line).append('\n');
     }
 
-    public static void end(ServerPlayer player, String result) {
+    public void end(ServerPlayer player, String result) {
         if (player == null || !isEnabled(player.getUUID())) {
             return;
         }

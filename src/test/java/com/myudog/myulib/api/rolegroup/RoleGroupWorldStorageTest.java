@@ -20,8 +20,8 @@ final class RoleGroupWorldStorageTest {
 //
 //    @Test
 //    void roleGroupsPersistToBoundWorldRoot() {
-//        RoleGroupManager.clear();
-//        RoleGroupManager.bindRoot(tempDir);
+//        RoleGroupManager.INSTANCE.clear();
+//        RoleGroupManager.INSTANCE.bindRoot(tempDir);
 //
 //        UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000321");
 //        RoleGroupDefinition group = new RoleGroupDefinition(
@@ -32,16 +32,16 @@ final class RoleGroupWorldStorageTest {
 //            Map.of("note", "persistent")
 //        );
 //
-//        RoleGroupManager.register(group);
-//        assertTrue(RoleGroupManager.assign(playerId, "builders"));
+//        RoleGroupManager.INSTANCE.register(group);
+//        assertTrue(RoleGroupManager.INSTANCE.assign(playerId, "builders"));
 //
 //        Path storageFile = tempDir.resolve("myulib").resolve("rolegroups.dat");
 //        assertTrue(Files.exists(storageFile));
 //
-//        RoleGroupManager.clear();
-//        RoleGroupManager.bindRoot(tempDir);
+//        RoleGroupManager.INSTANCE.clear();
+//        RoleGroupManager.INSTANCE.bindRoot(tempDir);
 //
-//        assertEquals("Builders", RoleGroupManager.get("builders").displayName());
-//        assertTrue(RoleGroupManager.groupIdsOf(playerId).contains("builders"));
+//        assertEquals("Builders", RoleGroupManager.INSTANCE.get("builders").displayName());
+//        assertTrue(RoleGroupManager.INSTANCE.groupIdsOf(playerId).contains("builders"));
 //    }
 }

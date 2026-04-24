@@ -1,4 +1,8 @@
 package com.myudog.myulib.client.api.ui.theme;
 
-public class ThemeManager {
+public final class ThemeManager {
+
+    public static final ThemeManager INSTANCE = new ThemeManager();
+
+    private ThemeManager() {}
 }

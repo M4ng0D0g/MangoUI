@@ -29,23 +29,23 @@ public abstract class MixinPlayerEntity {
 
         PermissionAction action = classifyAttackAction(attacker, target);
 
-        DebugTraceManager.begin(serverPlayer, "attack");
-        DebugTraceManager.step(serverPlayer, "action=" + action);
-        DebugTraceManager.step(serverPlayer, "target=" + target.getType().toString());
+        DebugTraceManager.INSTANCE.begin(serverPlayer, "attack");
+        DebugTraceManager.INSTANCE.step(serverPlayer, "action=" + action);
+        DebugTraceManager.INSTANCE.step(serverPlayer, "target=" + target.getType().toString());
         PermissionDecision decision = PermissionGate.evaluateDecision(serverPlayer, action, target.position());
-        DebugTraceManager.step(serverPlayer, "decision=" + decision);
-        DebugLogManager.log(DebugFeature.PERMISSION,
+        DebugTraceManager.INSTANCE.step(serverPlayer, "decision=" + decision);
+        DebugLogManager.INSTANCE.log(DebugFeature.PERMISSION,
                 "attack action=" + action + ",decision=" + decision
                         + ",attacker=" + attacker.getName().getString()
                         + ",target=" + target.getType());
 
         if (decision == PermissionDecision.DENY) {
             ci.cancel();
-            DebugTraceManager.end(serverPlayer, "result=DENY");
+            DebugTraceManager.INSTANCE.end(serverPlayer, "result=DENY");
             return;
         }
 
-        DebugTraceManager.end(serverPlayer, "result=ALLOW");
+        DebugTraceManager.INSTANCE.end(serverPlayer, "result=ALLOW");
     }
 
     private static PermissionAction classifyAttackAction(Player attacker, Entity target) {

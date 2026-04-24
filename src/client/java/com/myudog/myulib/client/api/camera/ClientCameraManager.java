@@ -12,14 +12,18 @@ import java.util.Iterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class ClientCameraManager {
-    private static final ClientCameraManager INSTANCE = new ClientCameraManager();
+
+    public static final ClientCameraManager INSTANCE = new ClientCameraManager();
+
+    
+    private final ClientCameraManager INSTANCE = new ClientCameraManager();
 
     private final CopyOnWriteArrayList<CameraModifier> modifiers = new CopyOnWriteArrayList<>();
 
     private ClientCameraManager() {
     }
 
-    public static ClientCameraManager getInstance() {
+    public ClientCameraManager getInstance() {
         return INSTANCE;
     }
 

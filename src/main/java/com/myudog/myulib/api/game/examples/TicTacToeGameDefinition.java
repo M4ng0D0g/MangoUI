@@ -3,7 +3,6 @@ package com.myudog.myulib.api.game.examples;
 import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.event.ProcessResult;
 import com.myudog.myulib.api.event.listener.EventListener;
-import com.myudog.myulib.api.game.core.GameBehavior;
 import com.myudog.myulib.api.game.core.GameConfig;
 import com.myudog.myulib.api.game.core.GameData;
 import com.myudog.myulib.api.game.core.GameDefinition;
@@ -34,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameDefinition.TicTacToeConfig, TicTacToeGameDefinition.TicTacToeData, TicTacToeGameDefinition.TicTacToeState> {
     public static final Identifier GAME_ID = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe");
+    private final TicTacToeBinding binding = new TicTacToeBinding();
 
     public TicTacToeGameDefinition(Identifier id) {
         super(id);
@@ -61,8 +61,13 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
     }
 
     @Override
-    protected List<GameBehavior<TicTacToeConfig, TicTacToeData, TicTacToeState>> gameBehaviors() {
-        return List.of(new TicTacToeBehavior());
+    protected void bindBehavior(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
+        binding.bind(instance);
+    }
+
+    @Override
+    protected void unbindBehavior(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
+        binding.unbind(instance);
     }
 
     public enum TicTacToeState implements GameState {
@@ -107,7 +112,7 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
 
             for (int row = 0; row < 3; row++) {
                 for (int col = 0; col < 3; col++) {
-                    Identifier id = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "ttt_cell_" + row + "_" + col);
+                    Identifier id = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe/cell_" + row + "_" + col);
                     InteractableObject cell = new InteractableObject(id);
                     cell.set(BlockGameObject.POS, new Vec3(start.x + col, start.y, start.z + row));
                     cell.set(BlockGameObject.BLOCK_STATE, Blocks.WHITE_WOOL.defaultBlockState());
@@ -127,7 +132,7 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
 
         @Override
         public boolean validate() {
-            if (!GameConfig.super.validate()) {
+            if (!GameConfig.validateDefinitions(this)) {
                 return false;
             }
             if (cellIds == null || cellIds.size() != 9) {
@@ -148,14 +153,14 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
         public Map<String, Identifier> teams() {
             return Map.of(
                     GameConfig.SPECTATOR_TEAM_KEY, GameConfig.SPECTATOR_TEAM_ID,
-                    "blue", Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe_blue")
+                    "blue", Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe/blue")
             );
         }
 
         @Override
         public List<TeamDefinition> additionalTeamDefinitions() {
             return List.of(new TeamDefinition(
-                    Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe_blue"),
+                    Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "tictactoe/blue"),
                     Component.literal("TicTacToe Blue"),
                     TeamColor.BLUE,
                     Map.of()
@@ -163,7 +168,7 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
         }
     }
 
-    private static final class TicTacToeBehavior implements GameBehavior<TicTacToeConfig, TicTacToeData, TicTacToeState> {
+    private static final class TicTacToeBinding {
         private static final int[][] LINES = new int[][]{
                 {0, 1, 2},
                 {3, 4, 5},
@@ -177,8 +182,7 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
 
         private EventListener<GameObjectInteractEvent> interactListener;
 
-        @Override
-        public void onBind(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
+        public void bind(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
             TicTacToeConfig cfg = instance.getConfig();
             TicTacToeData data = instance.getData();
 
@@ -242,8 +246,7 @@ public final class TicTacToeGameDefinition extends GameDefinition<TicTacToeGameD
             instance.getEventBus().subscribe(GameObjectInteractEvent.class, interactListener);
         }
 
-        @Override
-        public void onUnbind(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
+        public void unbind(GameInstance<TicTacToeConfig, TicTacToeData, TicTacToeState> instance) {
             if (interactListener != null) {
                 instance.getEventBus().unsubscribe(GameObjectInteractEvent.class, interactListener);
                 interactListener = null;

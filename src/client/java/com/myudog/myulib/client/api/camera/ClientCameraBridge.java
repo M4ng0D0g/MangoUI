@@ -19,7 +19,7 @@ public final class ClientCameraBridge {
     }
 
     public static void applyLocal(CameraActionPayload payload) {
-        ClientCameraManager.getInstance().applyPayload(payload);
+        ClientCameraManager.INSTANCE.getInstance().applyPayload(payload);
     }
 }
 

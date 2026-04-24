@@ -12,14 +12,18 @@ import java.util.Set;
 
 public final class ClientControlManager {
 
-    private static final Set<ControlType> DISABLED = EnumSet.noneOf(ControlType.class);
-    private static boolean isControlling;
-    private static boolean isControlled;
-    private static boolean installed;
+    public static final ClientControlManager INSTANCE = new ClientControlManager();
+
+    
+
+    private final Set<ControlType> DISABLED = EnumSet.noneOf(ControlType.class);
+    private boolean isControlling;
+    private boolean isControlled;
+    private boolean installed;
 
     private ClientControlManager() {}
 
-    public static void install() {
+    public void install() {
         if (installed) {
             return;
         }
@@ -41,28 +45,28 @@ public final class ClientControlManager {
                 }));
     }
 
-    public static boolean isControlling() {
+    public boolean isControlling() {
         return isControlling;
     }
 
-    public static boolean isControlled() {
+    public boolean isControlled() {
         return isControlled;
     }
 
-    public static boolean isControlEnabled(ControlType type) {
+    public boolean isControlEnabled(ControlType type) {
         synchronized (DISABLED) {
             return !DISABLED.contains(type);
         }
     }
 
-    public static boolean shouldBlockRotation() {
+    public boolean shouldBlockRotation() {
         return !isControlEnabled(ControlType.ROTATE);
     }
 
     /**
      * 負責將攔截到的按鍵打包並發送給伺服器
      */
-    public static void sendInput(boolean up, boolean down, boolean left, boolean right, boolean jumping, boolean sneaking) {
+    public void sendInput(boolean up, boolean down, boolean left, boolean right, boolean jumping, boolean sneaking) {
         if (!isControlling) {
             return;
         }
@@ -80,7 +84,7 @@ public final class ClientControlManager {
         ClientPlayNetworking.send(payload);
     }
 
-    public static void applyClientInputGuards(Minecraft minecraft) {
+    public void applyClientInputGuards(Minecraft minecraft) {
         if (minecraft == null) {
             return;
         }
@@ -116,7 +120,7 @@ public final class ClientControlManager {
         }
     }
 
-    public static Set<ControlType> disabledSnapshot() {
+    public Set<ControlType> disabledSnapshot() {
         synchronized (DISABLED) {
             return Set.copyOf(DISABLED);
         }

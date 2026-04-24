@@ -20,21 +20,21 @@ public final class MyulibApi {
 
 	public static void init() {
 		AccessSystems.init();
-		DebugLogManager.install();
+		DebugLogManager.INSTANCE.install();
 
 		CameraApi.initServer();
-		ControlManager.install();
+		ControlManager.INSTANCE.install();
 		HologramNetworking.registerPayloads();
 		ConfigUiNetworking.registerPayloads();
 		ConfigUiNetworking.registerServerReceivers();
 
-		FieldManager.install();
-		FieldVisualizationManager.install();
+		FieldManager.INSTANCE.install();
+		FieldVisualizationManager.INSTANCE.install();
 		GameManager.install();
 		GameManager.register(new TicTacToeGameDefinition(TicTacToeGameDefinition.GAME_ID));
-		PermissionManager.install();
-		RoleGroupManager.install();
-		TeamManager.install();
-		TimerManager.install();
+		PermissionManager.INSTANCE.install();
+		RoleGroupManager.INSTANCE.install();
+		TeamManager.INSTANCE.install();
+		TimerManager.INSTANCE.install();
 	}
 }

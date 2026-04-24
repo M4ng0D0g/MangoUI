@@ -16,18 +16,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-public class TimerManager {
-    private static final Map<Identifier, TimerDefinition> TIMERS = new LinkedHashMap<>();
-    private static final Map<Integer, TimerInstance> INSTANCES = new ConcurrentHashMap<>();
-    private static final AtomicInteger NEXT_INSTANCE_ID = new AtomicInteger(1);
+public final class TimerManager {
+
+    public static final TimerManager INSTANCE = new TimerManager();
+
+    
+    private final Map<Identifier, TimerDefinition> TIMERS = new LinkedHashMap<>();
+    private final Map<Integer, TimerInstance> INSTANCES = new ConcurrentHashMap<>();
+    private final AtomicInteger NEXT_INSTANCE_ID = new AtomicInteger(1);
 
     private TimerManager() {
     }
 
-    public static void install() {
+    public void install() {
         // 1. 掛載伺服器 Tick 事件 (驅動 Timer 的核心引擎)
         // 呼叫我們之前優化過的 update 方法
-        ServerTickEvents.END_SERVER_TICK.register(TimerManager::update);
+        ServerTickEvents.END_SERVER_TICK.register(TimerManager.INSTANCE::update);
 
         // 2. 掛載伺服器停止事件 (安全機制)
         // 伺服器關閉時，清空所有的實例與藍圖，防止重啟或 /reload 時發生記憶體洩漏
@@ -43,29 +47,29 @@ public class TimerManager {
         System.out.println("[Myulib] TimerManager 事件已成功掛載！");
     }
 
-    public static void register(TimerDefinition timer) {
+    public void register(TimerDefinition timer) {
         if (!validate(timer)) {
             throw new IllegalArgumentException("TimerDefinition 驗證失敗: " + (timer == null ? "null" : timer.id));
         }
         TIMERS.put(timer.id, timer);
-        DebugLogManager.log(DebugFeature.TIMER,
+        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
                 "register id=" + timer.id + ",duration=" + timer.durationTicks + ",mode=" + timer.mode);
     }
 
-    public static boolean validate(TimerDefinition timer) {
+    public boolean validate(TimerDefinition timer) {
         return timer != null && timer.id != null && !TIMERS.containsKey(timer.id);
     }
 
-    public static TimerDefinition unregister(Identifier timerId) {
-        DebugLogManager.log(DebugFeature.TIMER, "unregister id=" + timerId);
+    public TimerDefinition unregister(Identifier timerId) {
+        DebugLogManager.INSTANCE.log(DebugFeature.TIMER, "unregister id=" + timerId);
         return TIMERS.remove(timerId);
     }
 
-    public static boolean has(Identifier timerId) {
+    public boolean has(Identifier timerId) {
         return TIMERS.containsKey(timerId);
     }
 
-    public static int createInstance(Identifier timerId, Long ownerEntityId, TimerPayload payload, boolean autoStart, Object Level) {
+    public int createInstance(Identifier timerId, Long ownerEntityId, TimerPayload payload, boolean autoStart, Object Level) {
         TimerDefinition timer = TIMERS.get(timerId);
         if (timer == null) {
             throw new IllegalArgumentException("Unknown timer: " + timerId);
@@ -73,7 +77,7 @@ public class TimerManager {
         int instanceId = NEXT_INSTANCE_ID.getAndIncrement();
         TimerInstance instance = new TimerInstance(instanceId, timerId, ownerEntityId, payload);
         INSTANCES.put(instanceId, instance);
-        DebugLogManager.log(DebugFeature.TIMER,
+        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
                 "create instance=" + instanceId + ",timer=" + timerId + ",owner=" + ownerEntityId + ",autoStart=" + autoStart);
         if (autoStart) {
             start(instanceId);
@@ -81,11 +85,11 @@ public class TimerManager {
         return instanceId;
     }
 
-    public static TimerInstance getInstance(int timerEntityId, Object Level) {
+    public TimerInstance getInstance(int timerEntityId, Object Level) {
         return INSTANCES.get(timerEntityId);
     }
 
-    public static TimerSnapshot getSnapshot(int timerEntityId) {
+    public TimerSnapshot getSnapshot(int timerEntityId) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance == null) {
             return null;
@@ -98,20 +102,20 @@ public class TimerManager {
         return new TimerSnapshot(timerEntityId, instance.ownerEntityId, timer, instance.status, instance.elapsedTicks, remaining, instance.payload, instance.lastUpdatedTick);
     }
 
-    public static List<TimerInstance> findInstances(Long ownerEntityId, Object Level) {
+    public List<TimerInstance> findInstances(Long ownerEntityId, Object Level) {
         return INSTANCES.values().stream().filter(instance -> Objects.equals(instance.ownerEntityId, ownerEntityId)).toList();
     }
 
-    public static boolean isRunning(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isRunning(); }
-    public static boolean isPaused(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isPaused(); }
-    public static boolean isStopped(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isStopped(); }
-    public static boolean isCompleted(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isCompleted(); }
+    public boolean isRunning(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isRunning(); }
+    public boolean isPaused(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isPaused(); }
+    public boolean isStopped(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isStopped(); }
+    public boolean isCompleted(int timerEntityId, Object Level) { return getInstance(timerEntityId, Level) != null && getInstance(timerEntityId, Level).isCompleted(); }
 
-    public static void start(int timerEntityId) {
+    public void start(int timerEntityId) {
         updateState(timerEntityId, TimerStatus.RUNNING, snapshot -> snapshot.timer().startedActions.forEach(action -> action.invoke(snapshot)));
     }
 
-    public static int start(long ticks, Consumer<Integer> onExpire) {
+    public int start(long ticks, Consumer<Integer> onExpire) {
         Identifier timerId = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "auto_timer_" + NEXT_INSTANCE_ID.get());
         TimerDefinition timer = new TimerDefinition(timerId, ticks, TimerMode.COUNT_DOWN, true)
                 .onCompleted(snapshot -> {
@@ -124,19 +128,19 @@ public class TimerManager {
         return createInstance(timerId, null, null, true, null);
     }
 
-    public static void pause(int timerEntityId) {
+    public void pause(int timerEntityId) {
         updateState(timerEntityId, TimerStatus.PAUSED, snapshot -> snapshot.timer().pausedActions.forEach(action -> action.invoke(snapshot)));
     }
 
-    public static void resume(int timerEntityId) {
+    public void resume(int timerEntityId) {
         updateState(timerEntityId, TimerStatus.RUNNING, snapshot -> snapshot.timer().resumedActions.forEach(action -> action.invoke(snapshot)));
     }
 
-    public static void stop(int timerEntityId) {
+    public void stop(int timerEntityId) {
         updateState(timerEntityId, TimerStatus.STOPPED, snapshot -> snapshot.timer().stoppedActions.forEach(action -> action.invoke(snapshot)));
     }
 
-    public static void reset(int timerEntityId, boolean clearPayload) {
+    public void reset(int timerEntityId, boolean clearPayload) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance == null) return;
         instance.elapsedTicks = 0;
@@ -146,18 +150,18 @@ public class TimerManager {
         if (clearPayload) {
             instance.payload = null;
         }
-        DebugLogManager.log(DebugFeature.TIMER,
+        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
                 "reset instance=" + timerEntityId + ",clearPayload=" + clearPayload);
     }
 
-    public static void setElapsedTicks(int timerEntityId, long ticks) {
+    public void setElapsedTicks(int timerEntityId, long ticks) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance != null) {
             instance.elapsedTicks = Math.max(0L, ticks);
         }
     }
 
-    public static void setRemainingTicks(int timerEntityId, long ticks) {
+    public void setRemainingTicks(int timerEntityId, long ticks) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance != null) {
             TimerDefinition timer = TIMERS.get(instance.timerId);
@@ -167,23 +171,23 @@ public class TimerManager {
         }
     }
 
-    public static void setPayload(int timerEntityId, TimerPayload payload) {
+    public void setPayload(int timerEntityId, TimerPayload payload) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance != null) {
             instance.payload = payload;
         }
     }
 
-    public static int timerDefinitionCount() {
+    public int timerDefinitionCount() {
         return TIMERS.size();
     }
 
-    public static int timerInstanceCount() {
+    public int timerInstanceCount() {
         return INSTANCES.size();
     }
 
 
-    public static void update(MinecraftServer server) { // 建議將 Object Level 改為 MinecraftServer
+    public void update(MinecraftServer server) { // 建議將 Object Level 改為 MinecraftServer
         // 使用迭代器以便在遍歷時安全刪除已完成的實例
         java.util.Iterator<Map.Entry<Integer, TimerInstance>> iterator = INSTANCES.entrySet().iterator();
 
@@ -229,7 +233,7 @@ public class TimerManager {
                 if (instance.elapsedTicks >= timer.durationTicks) {
                     instance.status = TimerStatus.COMPLETED;
                     timer.completedActions.forEach(action -> action.invoke(snapshot));
-                    DebugLogManager.log(DebugFeature.TIMER,
+                    DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
                             "completed instance=" + id + ",timer=" + instance.timerId + ",elapsed=" + instance.elapsedTicks);
 
                     if (timer.autoStopOnComplete) {
@@ -240,13 +244,13 @@ public class TimerManager {
         }
     }
 
-    private static void updateState(int timerEntityId, TimerStatus status, java.util.function.Consumer<TimerSnapshot> actionConsumer) {
+    private void updateState(int timerEntityId, TimerStatus status, java.util.function.Consumer<TimerSnapshot> actionConsumer) {
         TimerInstance instance = INSTANCES.get(timerEntityId);
         if (instance == null) {
             return;
         }
         instance.status = status;
-        DebugLogManager.log(DebugFeature.TIMER,
+        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
                 "state instance=" + timerEntityId + " -> " + status);
         TimerSnapshot snapshot = getSnapshot(timerEntityId);
         if (snapshot != null) {

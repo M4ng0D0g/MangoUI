@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class FieldManagerTest {
     @BeforeEach
     void reset() {
-        FieldManager.clear();
+        FieldManager.INSTANCE.clear();
     }
     @Test
     void registerFindAndOverlapValidationWork() {
@@ -23,16 +23,16 @@ final class FieldManagerTest {
                 new AABB(0, 0, 0, 10, 10, 10),
                 Map.of("label", "Spawn")
         );
-        FieldManager.register(field);
-        assertEquals(field, FieldManager.get(fieldId), "Registered field should be retrievable by id");
-        assertEquals(1, FieldManager.all().size(), "Exactly one field should be registered");
-        assertTrue(FieldManager.findAt(dimensionId, new Vec3(1, 1, 1)).isPresent(),
+        FieldManager.INSTANCE.register(field);
+        assertEquals(field, FieldManager.INSTANCE.get(fieldId), "Registered field should be retrievable by id");
+        assertEquals(1, FieldManager.INSTANCE.all().size(), "Exactly one field should be registered");
+        assertTrue(FieldManager.INSTANCE.findAt(dimensionId, new Vec3(1, 1, 1)).isPresent(),
                 "Point inside the field should be found");
-        assertEquals(field, FieldManager.findAt(dimensionId, new Vec3(1, 1, 1)).orElseThrow(),
+        assertEquals(field, FieldManager.INSTANCE.findAt(dimensionId, new Vec3(1, 1, 1)).orElseThrow(),
                 "findAt should return the same field record");
         IllegalArgumentException overlap = assertThrows(
                 IllegalArgumentException.class,
-                () -> FieldManager.register(new FieldDefinition(
+                () -> FieldManager.INSTANCE.register(new FieldDefinition(
                         Identifier.fromNamespaceAndPath("tests", "spawn_overlap"),
                         dimensionId,
                         new AABB(5, 5, 5, 15, 15, 15),

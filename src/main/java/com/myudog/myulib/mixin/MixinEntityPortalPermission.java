@@ -18,16 +18,16 @@ public abstract class MixinEntityPortalPermission {
     @Inject(method = "setAsInsidePortal", at = @At("HEAD"), cancellable = true, require = 0)
     private void onEnterPortal(CallbackInfo ci) {
         if ((Object) this instanceof ServerPlayer player) {
-            DebugTraceManager.begin(player, "setAsInsidePortal");
-            DebugTraceManager.step(player, "action=" + PermissionAction.USE_PORTAL);
+            DebugTraceManager.INSTANCE.begin(player, "setAsInsidePortal");
+            DebugTraceManager.INSTANCE.step(player, "action=" + PermissionAction.USE_PORTAL);
             PermissionDecision decision = PermissionGate.evaluateDecision(player, PermissionAction.USE_PORTAL, player.position());
-            DebugTraceManager.step(player, "decision=" + decision);
+            DebugTraceManager.INSTANCE.step(player, "decision=" + decision);
             if (decision == PermissionDecision.DENY) {
                 ci.cancel();
-                DebugTraceManager.end(player, "result=DENY");
+                DebugTraceManager.INSTANCE.end(player, "result=DENY");
                 return;
             }
-            DebugTraceManager.end(player, "result=ALLOW");
+            DebugTraceManager.INSTANCE.end(player, "result=ALLOW");
         }
     }
 }

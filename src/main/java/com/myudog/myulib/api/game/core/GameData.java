@@ -40,6 +40,15 @@ public abstract class GameData {
     public void addParticipant(UUID uuid, int entityId) { participantToEntity.put(uuid, entityId); }
     public void removeParticipant(UUID uuid) { participantToEntity.remove(uuid); }
 
+    public int bindParticipant(UUID uuid) {
+        if (uuid == null) {
+            throw new IllegalArgumentException("uuid 不得為空");
+        }
+        int entityId = ecsContainer.createEntity();
+        participantToEntity.put(uuid, entityId);
+        return entityId;
+    }
+
     public void addRuntimeObject(Identifier id, IGameObject obj) {
         this.runtimeObjects.put(id, obj);
     }
@@ -156,10 +165,15 @@ public abstract class GameData {
         teamMembers.remove(teamId);
     }
 
-    public void init(GameConfig config) {
+    public final void init(GameConfig config) {
         if (config == null) {
             return;
         }
+
+        Set<Identifier> stagedFields = new LinkedHashSet<>();
+        Set<Identifier> stagedRoles = new LinkedHashSet<>();
+        Set<Identifier> stagedTeams = new LinkedHashSet<>();
+        Set<Identifier> stagedTimers = new LinkedHashSet<>();
 
         teamMembers.clear();
         for (Identifier teamId : config.teams().values()) {
@@ -167,23 +181,61 @@ public abstract class GameData {
         }
         teamMembers.putIfAbsent(GameConfig.SPECTATOR_TEAM_ID, ConcurrentHashMap.newKeySet());
 
-        for (FieldDefinition definition : config.fieldDefinitions()) {
-            FieldManager.register(definition);
-            registeredFieldIds.add(definition.id());
-        }
-        for (RoleGroupDefinition definition : config.roleGroupDefinitions()) {
-            RoleGroupManager.register(definition);
-            registeredRoleGroupIds.add(definition.id());
-        }
-        for (TeamDefinition definition : config.teamDefinitions()) {
-            TeamManager.register(definition);
-            registeredTeamIds.add(definition.id());
-        }
-        for (TimerDefinition definition : config.timerDefinitions()) {
-            TimerManager.register(definition);
-            registeredTimerIds.add(definition.id);
+        try {
+            for (FieldDefinition definition : config.fieldDefinitions()) {
+                if (!FieldManager.INSTANCE.validate(definition)) {
+                    throw new IllegalStateException("FieldDefinition 驗證失敗: " + (definition == null ? "null" : definition.id()));
+                }
+                FieldManager.INSTANCE.register(definition);
+                stagedFields.add(definition.id());
+                registeredFieldIds.add(definition.id());
+            }
+            for (RoleGroupDefinition definition : config.roleGroupDefinitions()) {
+                if (!RoleGroupManager.INSTANCE.validate(definition)) {
+                    throw new IllegalStateException("RoleGroupDefinition 驗證失敗: " + (definition == null ? "null" : definition.id()));
+                }
+                RoleGroupManager.INSTANCE.register(definition);
+                stagedRoles.add(definition.id());
+                registeredRoleGroupIds.add(definition.id());
+            }
+            for (TeamDefinition definition : config.teamDefinitions()) {
+                if (!TeamManager.INSTANCE.validate(definition)) {
+                    throw new IllegalStateException("TeamDefinition 驗證失敗: " + (definition == null ? "null" : definition.id()));
+                }
+                TeamManager.INSTANCE.register(definition);
+                stagedTeams.add(definition.id());
+                registeredTeamIds.add(definition.id());
+            }
+            for (TimerDefinition definition : config.timerDefinitions()) {
+                if (!TimerManager.INSTANCE.validate(definition)) {
+                    throw new IllegalStateException("TimerDefinition 驗證失敗: " + (definition == null ? "null" : definition.id));
+                }
+                TimerManager.INSTANCE.register(definition);
+                stagedTimers.add(definition.id);
+                registeredTimerIds.add(definition.id);
+            }
+        } catch (Exception ex) {
+            for (Identifier id : Set.copyOf(stagedTimers)) {
+                TimerManager.INSTANCE.unregister(id);
+                registeredTimerIds.remove(id);
+            }
+            for (Identifier id : Set.copyOf(stagedTeams)) {
+                TeamManager.INSTANCE.unregister(id);
+                registeredTeamIds.remove(id);
+            }
+            for (Identifier id : Set.copyOf(stagedRoles)) {
+                RoleGroupManager.INSTANCE.delete(id);
+                registeredRoleGroupIds.remove(id);
+            }
+            for (Identifier id : Set.copyOf(stagedFields)) {
+                FieldManager.INSTANCE.unregister(id);
+                registeredFieldIds.remove(id);
+            }
+            teamMembers.clear();
+            throw new RuntimeException("GameData 初始化回滾: " + ex.getMessage(), ex);
         }
     }
+
 
     public void reset(GameInstance<?, ?, ?> instance) {
         participantToEntity.clear();
@@ -193,19 +245,19 @@ public abstract class GameData {
         runtimeObjects.clear();
 
         for (Identifier id : Set.copyOf(registeredFieldIds)) {
-            FieldManager.unregister(id);
+            FieldManager.INSTANCE.unregister(id);
             registeredFieldIds.remove(id);
         }
         for (Identifier id : Set.copyOf(registeredRoleGroupIds)) {
-            RoleGroupManager.delete(id);
+            RoleGroupManager.INSTANCE.delete(id);
             registeredRoleGroupIds.remove(id);
         }
         for (Identifier id : Set.copyOf(registeredTeamIds)) {
-            TeamManager.unregister(id);
+            TeamManager.INSTANCE.unregister(id);
             registeredTeamIds.remove(id);
         }
         for (Identifier id : Set.copyOf(registeredTimerIds)) {
-            TimerManager.unregister(id);
+            TimerManager.INSTANCE.unregister(id);
             registeredTimerIds.remove(id);
         }
     }

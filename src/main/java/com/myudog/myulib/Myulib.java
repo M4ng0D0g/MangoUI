@@ -12,7 +12,12 @@ import org.slf4j.LoggerFactory;
 
 public final class Myulib implements ModInitializer {
     public static final String MOD_ID = "myulib";
-    private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    public static final int TPS = 20;
+    public static final int TPM = 1200;
+
+
 
     @Override
     public void onInitialize() {

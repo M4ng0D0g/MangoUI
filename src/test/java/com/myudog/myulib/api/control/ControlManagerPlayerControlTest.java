@@ -14,23 +14,23 @@ final class ControlManagerPlayerControlTest {
 
     @AfterEach
     void cleanup() {
-        ControlManager.clearAllPlayerControls();
+        ControlManager.INSTANCE.clearAllPlayerControls();
     }
 
     @Test
     void playerControlsDefaultToEnabledAndCanBeToggled() {
         UUID playerId = UUID.randomUUID();
 
-        assertTrue(ControlManager.isPlayerControlEnabled(playerId, ControlType.MOVE));
-        assertTrue(ControlManager.setPlayerControl(playerId, ControlType.MOVE, false));
-        assertFalse(ControlManager.isPlayerControlEnabled(playerId, ControlType.MOVE));
+        assertTrue(ControlManager.INSTANCE.isPlayerControlEnabled(playerId, ControlType.MOVE));
+        assertTrue(ControlManager.INSTANCE.setPlayerControl(playerId, ControlType.MOVE, false));
+        assertFalse(ControlManager.INSTANCE.isPlayerControlEnabled(playerId, ControlType.MOVE));
 
-        Set<ControlType> disabled = ControlManager.disabledPlayerControls(playerId);
+        Set<ControlType> disabled = ControlManager.INSTANCE.disabledPlayerControls(playerId);
         assertTrue(disabled.contains(ControlType.MOVE));
 
-        assertTrue(ControlManager.setPlayerControl(playerId, ControlType.MOVE, true));
-        assertTrue(ControlManager.isPlayerControlEnabled(playerId, ControlType.MOVE));
-        assertTrue(ControlManager.disabledPlayerControls(playerId).isEmpty());
+        assertTrue(ControlManager.INSTANCE.setPlayerControl(playerId, ControlType.MOVE, true));
+        assertTrue(ControlManager.INSTANCE.isPlayerControlEnabled(playerId, ControlType.MOVE));
+        assertTrue(ControlManager.INSTANCE.disabledPlayerControls(playerId).isEmpty());
     }
 
     @Test

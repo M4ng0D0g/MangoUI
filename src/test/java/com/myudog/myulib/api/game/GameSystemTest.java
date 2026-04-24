@@ -6,9 +6,7 @@ import com.myudog.myulib.api.game.state.GameState;
 import com.myudog.myulib.api.game.state.GameStateMachine;
 import com.myudog.myulib.internal.event.EventDispatcherImpl;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Map;
@@ -81,12 +79,17 @@ final class GameSystemTest {
         protected EventDispatcherImpl createEventBus() {
             return new EventDispatcherImpl();
         }
+
         @Override
-        public void bindBehaviors(GameInstance<GameConfig, TestGameData, TestState> instance) {
+        protected void bindBehavior(GameInstance<GameConfig, TestGameData, TestState> instance) {
         }
 
         @Override
-        protected void onEnd(GameInstance<GameConfig, TestGameData, TestState> instance) throws Exception {
+        protected void unbindBehavior(GameInstance<GameConfig, TestGameData, TestState> instance) {
+        }
+
+        @Override
+        protected void onShutDown(GameInstance<GameConfig, TestGameData, TestState> instance) throws Exception {
             onEndCalls++;
             if (failOnEnd) {
                 throw new Exception("forced_end_failure");
@@ -97,14 +100,16 @@ final class GameSystemTest {
             return onEndCalls;
         }
 
-        private void invokeOnEnd(GameInstance<GameConfig, TestGameData, TestState> instance) throws Exception {
-            onEnd(instance);
+        private void invokeOnShutDown(GameInstance<GameConfig, TestGameData, TestState> instance) throws Exception {
+            onShutDown(instance);
         }
     }
 
     private static final class StubGameInstance extends GameInstance<GameConfig, TestGameData, TestState> {
         private int instanceId;
         private boolean enabled;
+        private boolean initialized;
+        private boolean started;
         private final TestGameDefinition definition;
 
         private StubGameInstance(TestGameDefinition definition) {
@@ -132,6 +137,8 @@ final class GameSystemTest {
                 definitionField.set(instance, definition);
                 instance.instanceId = instanceId;
                 instance.enabled = true;
+                instance.initialized = true;
+                instance.started = true;
                 return instance;
             } catch (ReflectiveOperationException ex) {
                 throw new RuntimeException("Failed to create StubGameInstance", ex);
@@ -149,17 +156,36 @@ final class GameSystemTest {
         }
 
         @Override
-        public boolean end() {
+        public boolean isInitialized() {
+            return initialized;
+        }
+
+        @Override
+        public boolean isStarted() {
+            return started;
+        }
+
+        @Override
+        public boolean shutdown() {
             if (!enabled) {
                 return false;
             }
             try {
-                definition.invokeOnEnd(this);
+                definition.invokeOnShutDown(this);
             } catch (Exception e) {
                 throw new RuntimeException("強制結束遊戲失敗: " + e.getMessage(), e);
             }
-            enabled = false;
+            initialized = false;
+            started = false;
             return true;
+        }
+
+        private void setInitialized(boolean initialized) {
+            this.initialized = initialized;
+        }
+
+        private void setStarted(boolean started) {
+            this.started = started;
         }
     }
 
@@ -244,7 +270,7 @@ final class GameSystemTest {
     }
 
     @Test
-    void endInstanceRemovesInstanceAndMappingsWhenOnEndSucceeds() {
+    void endInstanceRecyclesResourcesAndClearsPlayerMappingsWhenOnEndSucceeds() {
         String token = "end_success_room";
         int instanceId = 31_001;
         UUID playerId = UUID.randomUUID();
@@ -260,15 +286,38 @@ final class GameSystemTest {
             players.put(playerId, instanceId);
             assertTrue(GameManager.instanceOf(playerId).isPresent(), "Player mapping should exist before end");
 
-            assertTrue(GameManager.endInstance(token), "endInstance(token) should succeed for a valid enabled instance");
+            assertTrue(GameManager.shutdownInstance(token), "shutdownInstance(token) should succeed for a valid enabled instance");
             assertEquals(1, definition.onEndCalls(), "Definition onEnd should be invoked exactly once");
-            assertNull(GameManager.getInstance(instanceId), "Ended instance should be removed from manager");
-            assertTrue(GameManager.resolveInstanceId(token).isEmpty(), "Ended token should be detached from manager");
+            assertNotNull(GameManager.getInstance(instanceId), "Ended instance should remain registered for next init cycle");
+            assertTrue(GameManager.resolveInstanceId(token).isPresent(), "Ended token should remain resolvable for next init cycle");
+            assertFalse(instance.isInitialized(), "Ended instance should require init before the next join/start");
+            assertFalse(instance.isStarted(), "Ended instance should not remain in started state");
             assertTrue(GameManager.instanceOf(playerId).isEmpty(), "Player-to-instance mapping should be cleaned when ending");
         } finally {
             instances.remove(instanceId);
             tokens.remove(token);
             players.remove(playerId);
+        }
+    }
+
+    @Test
+    void managerRequiresInitBeforeJoinOrStart() {
+        int instanceId = 31_003;
+        UUID playerId = UUID.randomUUID();
+        StubGameInstance instance = StubGameInstance.create(instanceId,
+                new TestGameDefinition(Identifier.fromNamespaceAndPath("tests", "init_gate")));
+        Map<Integer, GameInstance<?, ?, ?>> instances = instanceMap();
+
+        try {
+            instance.setInitialized(false);
+            instance.setStarted(false);
+            instances.put(instanceId, instance);
+
+            assertFalse(GameManager.joinPlayer(instanceId, playerId, null), "join should fail before init");
+            assertFalse(GameManager.startInstance(instanceId), "start should fail before init");
+
+        } finally {
+            instances.remove(instanceId);
         }
     }
 
@@ -286,8 +335,8 @@ final class GameSystemTest {
             tokens.put(token, instanceId);
 
             RuntimeException ex = assertThrows(RuntimeException.class,
-                    () -> GameManager.endInstance(instanceId),
-                    "endInstance should propagate onEnd failure as RuntimeException");
+                    () -> GameManager.shutdownInstance(instanceId),
+                    "shutdownInstance should propagate onShutDown failure as RuntimeException");
             assertTrue(ex.getMessage().contains("強制結束遊戲失敗"), "Exception message should indicate force-end failure");
             assertEquals(1, definition.onEndCalls(), "Definition onEnd should still be attempted once");
             assertNotNull(GameManager.getInstance(instanceId), "Failed end should keep the instance registered");

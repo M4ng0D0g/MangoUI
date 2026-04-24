@@ -57,7 +57,7 @@ public final class ServerControlNetworking {
         receiversRegistered = true;
 
         ServerPlayNetworking.registerGlobalReceiver(ControlInputPayload.TYPE,
-                (payload, context) -> context.server().execute(() -> ControlManager.updateInput(context.player(), payload)));
+                (payload, context) -> context.server().execute(() -> ControlManager.INSTANCE.updateInput(context.player(), payload)));
     }
 
     public static void syncControlState(ServerPlayer player, int disabledMask, boolean controlling, boolean controlled) {

@@ -12,7 +12,7 @@ public class MixinMouse {
 
     @Inject(method = "turnPlayer", at = @At("HEAD"), cancellable = true, require = 0)
     private void blockRotationWhenDisabled(CallbackInfo ci) {
-        if (ClientControlManager.shouldBlockRotation()) {
+        if (ClientControlManager.INSTANCE.shouldBlockRotation()) {
             ci.cancel();
         }
     }

@@ -36,21 +36,35 @@ public interface GameConfig {
      *
      * @throws IllegalArgumentException 若參數不符合遊戲啟動條件
      */
-    default boolean validate() {
-        Map<Identifier, IGameObject> objects = Objects.requireNonNull(gameObjects(), "遊戲物件映射不得為空");
+    boolean validate();
+
+    static boolean validateDefinitions(GameConfig config) {
+        Objects.requireNonNull(config, "config");
+
+        Map<Identifier, IGameObject> objects = Objects.requireNonNull(config.gameObjects(), "遊戲物件映射不得為空");
         if (objects.isEmpty()) throw new IllegalArgumentException("遊戲物件清單不得為空");
 
-        if (maxPlayer() <= 0) {
+        if (config.maxPlayer() <= 0) {
             throw new IllegalArgumentException("maxPlayer 必須大於 0");
         }
 
-        Map<String, Identifier> teamMap = Objects.requireNonNull(teams(), "teams 不得為空");
+        Map<String, Identifier> teamMap = Objects.requireNonNull(config.teams(), "teams 不得為空");
         Identifier spectatorTeam = teamMap.get(SPECTATOR_TEAM_KEY);
         if (spectatorTeam == null) {
             throw new IllegalArgumentException("teams 必須包含 spectator 隊伍");
         }
         if (!SPECTATOR_TEAM_ID.equals(spectatorTeam)) {
             throw new IllegalArgumentException("spectator 隊伍 id 必須是 " + SPECTATOR_TEAM_ID);
+        }
+
+        long playableTeamCount = teamMap.entrySet().stream()
+                .filter(entry -> !SPECTATOR_TEAM_KEY.equals(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+        if (playableTeamCount < 1) {
+            throw new IllegalArgumentException("teams 必須至少包含一個非 spectator 的可玩隊伍");
         }
 
         for (Map.Entry<String, Identifier> entry : teamMap.entrySet()) {
@@ -61,6 +75,9 @@ public interface GameConfig {
             }
             if (teamId == null) {
                 throw new IllegalArgumentException("teams 的 team id 不得為空: " + alias);
+            }
+            if (!isScopedTokenIdentifier(teamId)) {
+                throw new IllegalArgumentException("teams 的 team id 必須使用 token path 形式: " + teamId);
             }
         }
 
@@ -82,23 +99,35 @@ public interface GameConfig {
             }
         }
 
-        for (FieldDefinition definition : fieldDefinitions()) {
-            if (!FieldManager.validate(definition)) {
+        for (FieldDefinition definition : config.fieldDefinitions()) {
+            if (definition == null || !isScopedTokenIdentifier(definition.id())) {
+                return false;
+            }
+            if (!FieldManager.INSTANCE.validate(definition)) {
                 return false;
             }
         }
-        for (RoleGroupDefinition definition : roleGroupDefinitions()) {
-            if (!RoleGroupManager.validate(definition)) {
+        for (RoleGroupDefinition definition : config.roleGroupDefinitions()) {
+            if (definition == null || !isScopedTokenIdentifier(definition.id())) {
+                return false;
+            }
+            if (!RoleGroupManager.INSTANCE.validate(definition)) {
                 return false;
             }
         }
-        for (TeamDefinition definition : teamDefinitions()) {
-            if (!TeamManager.validate(definition)) {
+        for (TeamDefinition definition : config.teamDefinitions()) {
+            if (definition == null || !isScopedTokenIdentifier(definition.id())) {
+                return false;
+            }
+            if (!TeamManager.INSTANCE.validate(definition)) {
                 return false;
             }
         }
-        for (TimerDefinition definition : timerDefinitions()) {
-            if (!TimerManager.validate(definition)) {
+        for (TimerDefinition definition : config.timerDefinitions()) {
+            if (definition == null || !isScopedTokenIdentifier(definition.id)) {
+                return false;
+            }
+            if (!TimerManager.INSTANCE.validate(definition)) {
                 return false;
             }
         }
@@ -120,9 +149,7 @@ public interface GameConfig {
         return false;
     }
 
-    default Map<String, Identifier> teams() {
-        return Map.of(SPECTATOR_TEAM_KEY, SPECTATOR_TEAM_ID);
-    }
+    Map<String, Identifier> teams();
 
     default List<FieldDefinition> fieldDefinitions() {
         return List.of();
@@ -143,9 +170,7 @@ public interface GameConfig {
         return List.copyOf(merged.values());
     }
 
-    default List<TeamDefinition> additionalTeamDefinitions() {
-        return List.of();
-    }
+    List<TeamDefinition> additionalTeamDefinitions();
 
     default TeamDefinition spectatorTeamDefinition() {
         return new TeamDefinition(
@@ -167,9 +192,45 @@ public interface GameConfig {
     static GameConfig empty() {
         return new GameConfig() {
             @Override
+            public boolean validate() {
+                return true;
+            }
+
+            @Override
             public Map<Identifier, IGameObject> gameObjects() {
                 return Map.of();
             }
+
+            @Override
+            public Map<String, Identifier> teams() {
+                return Map.of(
+                        SPECTATOR_TEAM_KEY, SPECTATOR_TEAM_ID,
+                        "default", Identifier.fromNamespaceAndPath("myulib", "default/default")
+                );
+            }
+
+            @Override
+            public List<TeamDefinition> additionalTeamDefinitions() {
+                return List.of(new TeamDefinition(
+                        Identifier.fromNamespaceAndPath("myulib", "default/default"),
+                        Component.literal("Default"),
+                        TeamColor.WHITE,
+                        Map.of(),
+                        0
+                ));
+            }
         };
+    }
+
+    private static boolean isScopedTokenIdentifier(Identifier identifier) {
+        if (identifier == null) {
+            return false;
+        }
+        String path = identifier.getPath();
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        String[] segments = path.split("/");
+        return segments.length >= 2;
     }
 }

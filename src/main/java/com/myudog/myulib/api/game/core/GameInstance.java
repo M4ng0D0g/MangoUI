@@ -16,8 +16,6 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,7 +37,6 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
 
     // 專屬事件派發器 (確保房間間的邏輯完全隔離)
     private final EventDispatcherImpl eventBus;
-    private final List<GameBehavior<C, D, S>> boundBehaviors = new ArrayList<>();
 
     private boolean enabled = true;
     private boolean initialized = false;
@@ -186,10 +183,25 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
             if (from != null) from.onExit(this);
             to.onEnter(this);
             eventBus.dispatch(new GameStateChangeEvent<>(this, from, to));
-            DebugLogManager.log(DebugFeature.GAME, "instance=" + instanceId + " transition [" + (from == null ? "NONE" : from) + " -> " + to + "]");
+            DebugLogManager.INSTANCE.log(DebugFeature.GAME, "instance=" + instanceId + " transition [" + (from == null ? "NONE" : from) + " -> " + to + "]");
             return true;
         }
         return false;
+    }
+
+    public boolean forceTransition(S to) {
+        if (!enabled || to == null) {
+            return false;
+        }
+
+        S from = stateMachine.getCurrent();
+        if (from != null) {
+            from.onExit(this);
+        }
+        stateMachine.forceTransition(to);
+        to.onEnter(this);
+        eventBus.dispatch(new GameStateChangeEvent<>(this, from, to));
+        return true;
     }
 
     // --- 生命週期 ---
@@ -208,31 +220,11 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
      */
     public void destroy() {
         if (!enabled) return;
+        cleanupRuntimeResources();
         this.enabled = false;
-        this.initialized = false;
-        this.started = false;
-
-        S current = stateMachine.getCurrent();
-        if (current != null) {
-            current.onExit(this);
-        }
-
-        for (int i = boundBehaviors.size() - 1; i >= 0; i--) {
-            boundBehaviors.get(i).onUnbind(this);
-        }
-        boundBehaviors.clear();
-
-        // 由 GameData 子類自行擴充跨系統清理（例如 field/team）
-        this.eventBus.clear();
-
-        // 重置資料載體（清空參與者與 runtime objects）
-        if (this.data != null) {
-            this.data.reset(this);
-            this.data = null;
-        }
         this.hostUuid = null;
 
-        DebugLogManager.log(DebugFeature.GAME, "destroy instance=" + instanceId);
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME, "destroy instance=" + instanceId);
     }
 
     public boolean isEnabled() { return enabled; }
@@ -278,11 +270,6 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
         }
     }
 
-    public void bindBehavior(GameBehavior<C, D, S> behavior) {
-        behavior.onBind(this);
-        boundBehaviors.add(behavior);
-    }
-
     public boolean init() {
         if (!enabled || initialized) {
             return false;
@@ -304,22 +291,19 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
             this.data = createdData;
             createdData.init(config);
             initializeRuntimeObjects();
-
-            for (GameBehavior<C, D, S> behavior : definition.gameBehaviors()) {
-                bindBehavior(behavior);
-            }
-            definition.bindBehaviors(this);
+            definition.init(this);
 
             initialized = true;
-            DebugLogManager.log(DebugFeature.GAME, "init instance=" + instanceId + ",state=" + getCurrentState());
+            DebugLogManager.INSTANCE.log(DebugFeature.GAME, "init instance=" + instanceId + ",state=" + getCurrentState());
             return true;
         } catch (Exception e) {
             initialized = false;
             started = false;
-            for (int i = boundBehaviors.size() - 1; i >= 0; i--) {
-                boundBehaviors.get(i).onUnbind(this);
+            try {
+                definition.clean(this);
+            } catch (Exception ignored) {
+                // Best-effort rollback for partially bound definition resources.
             }
-            boundBehaviors.clear();
             if (this.data != null) {
                 this.data.reset(this);
                 this.data = null;
@@ -333,7 +317,8 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
             return false;
         }
 
-        if (!initialized && !init()) {
+        // Start requires resources/data to be initialized first.
+        if (!initialized) {
             return false;
         }
 
@@ -341,7 +326,7 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
             definition.onStart(this);
             started = true;
 
-            DebugLogManager.log(DebugFeature.GAME, "start instance=" + instanceId + ",state=" + getCurrentState());
+            DebugLogManager.INSTANCE.log(DebugFeature.GAME, "start instance=" + instanceId + ",state=" + getCurrentState());
             return true;
         } catch (Exception e) {
             started = false;
@@ -349,19 +334,24 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
         }
     }
 
-    public boolean end() {
+    public boolean shutdown() {
         if (!enabled) {
             return false;
         }
 
         try {
-            definition.onEnd(this);
+            definition.onShutDown(this);
         } catch (Exception e) {
             throw new RuntimeException("強制結束遊戲失敗: " + e.getMessage(), e);
         }
 
-        destroy();
+        clean();
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME, "shutdown instance=" + instanceId + " cleaned");
         return true;
+    }
+
+    public void clean() {
+        cleanupRuntimeResources();
     }
 
     public void resetState() {
@@ -400,5 +390,33 @@ public class GameInstance<C extends GameConfig, D extends GameData, S extends Ga
             return requestedTeamId;
         }
         return GameConfig.SPECTATOR_TEAM_ID;
+    }
+
+    private void cleanupRuntimeResources() {
+        initialized = false;
+        started = false;
+        tickCount = 0;
+
+        S current = stateMachine.getCurrent();
+        if (current != null) {
+            current.onExit(this);
+        }
+        stateMachine.reset();
+        S initial = stateMachine.getCurrent();
+        if (initial != null) {
+            initial.onEnter(this);
+        }
+
+        try {
+            definition.clean(this);
+        } catch (Exception e) {
+            throw new RuntimeException("清理遊戲行為失敗: " + e.getMessage(), e);
+        }
+
+        eventBus.clear();
+        if (data != null) {
+            data.reset(this);
+            data = null;
+        }
     }
 }

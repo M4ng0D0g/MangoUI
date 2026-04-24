@@ -1,6 +1,5 @@
 package com.myudog.myulib.api.game.core;
 
-import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.debug.DebugFeature;
 import com.myudog.myulib.api.debug.DebugLogManager;
 import com.myudog.myulib.api.effect.ISpatialEffectManager;
@@ -79,11 +78,11 @@ public final class GameManager {
     public static void register(GameDefinition<?, ?, ?> definition) {
         Objects.requireNonNull(definition, "GameDefinition 不能為空");
         DEFINITIONS.put(definition.getId(), definition);
-        DebugLogManager.log(DebugFeature.GAME, "register definition id=" + definition.getId());
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME, "register definition id=" + definition.getId());
     }
 
     public static GameDefinition<?, ?, ?> unregister(Identifier gameId) {
-        DebugLogManager.log(DebugFeature.GAME, "unregister definition id=" + gameId);
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME, "unregister definition id=" + gameId);
         return DEFINITIONS.remove(gameId);
     }
 
@@ -124,13 +123,18 @@ public final class GameManager {
 
         GameInstance<C, D, S> instance = definition.createInstance(instanceId, config, level);
 
-        Identifier sessionIdentifier = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "session_" + instanceId);
+        Identifier sessionIdentifier = GameScopeTokens.scoped(
+                definition.modToken(),
+                definition.gameToken(),
+                "session",
+                normalizedToken
+        );
         instance.setupIdentity(sessionIdentifier);
 
         INSTANCES.put(instanceId, instance);
         INSTANCE_TOKENS.put(normalizedToken, instanceId);
 
-        DebugLogManager.log(DebugFeature.GAME,
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME,
                 "create instance id=" + instanceId + ", token=" + normalizedToken + ", definition=" + gameId + ", sessionIdentifier=" + sessionIdentifier);
         return instance;
     }
@@ -211,10 +215,10 @@ public final class GameManager {
             unassignPlayersInInstance(instanceId);
             // 觸發內部清理，包含資料重置與 Scoped 外部資源 (隊伍、區域) 註銷
             instance.destroy();
-            DebugLogManager.log(DebugFeature.GAME, "destroy instance id=" + instanceId);
+            DebugLogManager.INSTANCE.log(DebugFeature.GAME, "destroy instance id=" + instanceId);
             return true;
         }
-        DebugLogManager.log(DebugFeature.GAME, "destroy miss instance id=" + instanceId);
+        DebugLogManager.INSTANCE.log(DebugFeature.GAME, "destroy miss instance id=" + instanceId);
         return false;
     }
 
@@ -225,7 +229,7 @@ public final class GameManager {
 
     public static boolean startInstance(int instanceId) {
         GameInstance<?, ?, ?> instance = INSTANCES.get(instanceId);
-        if (instance == null || !instance.isEnabled()) {
+        if (instance == null || !instance.isEnabled() || !instance.isInitialized()) {
             return false;
         }
         return instance.start();
@@ -249,24 +253,22 @@ public final class GameManager {
         return resolved.isPresent() && initInstance(resolved.getAsInt());
     }
 
-    public static boolean endInstance(int instanceId) {
+    public static boolean shutdownInstance(int instanceId) {
         GameInstance<?, ?, ?> instance = INSTANCES.get(instanceId);
         if (instance == null || !instance.isEnabled()) {
             return false;
         }
 
-        boolean ended = instance.end();
+        boolean ended = instance.shutdown();
         if (ended) {
-            INSTANCES.remove(instanceId);
-            removeTokenByInstanceId(instanceId);
             unassignPlayersInInstance(instanceId);
         }
         return ended;
     }
 
-    public static boolean endInstance(String instanceToken) {
+    public static boolean shutdownInstance(String instanceToken) {
         OptionalInt resolved = resolveInstanceId(instanceToken);
-        return resolved.isPresent() && endInstance(resolved.getAsInt());
+        return resolved.isPresent() && shutdownInstance(resolved.getAsInt());
     }
 
     public static OptionalInt instanceOf(UUID playerId) {
@@ -276,7 +278,7 @@ public final class GameManager {
 
     public static boolean joinPlayer(int instanceId, UUID playerId, Identifier requestedTeamId) {
         GameInstance<?, ?, ?> instance = INSTANCES.get(instanceId);
-        if (instance == null || !instance.isEnabled()) {
+        if (instance == null || !instance.isEnabled() || !instance.isInitialized()) {
             return false;
         }
 
@@ -343,7 +345,7 @@ public final class GameManager {
                 // 惰性清理已停用的實例
                 INSTANCES.remove(entry.getKey());
                 removeTokenByInstanceId(entry.getKey());
-                DebugLogManager.log(DebugFeature.GAME, "auto-prune disabled instance id=" + entry.getKey());
+                DebugLogManager.INSTANCE.log(DebugFeature.GAME, "auto-prune disabled instance id=" + entry.getKey());
                 continue;
             }
             instance.tick();

@@ -16,20 +16,24 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class FieldManager {
 
+    public static final FieldManager INSTANCE = new FieldManager();
+
+    
+
     // 🌟 記憶體快取：所有查詢都在此進行，效能極高
-    private static final Map<Identifier, FieldDefinition> FIELDS = new ConcurrentHashMap<>();
-    private static final ShortIdRegistry ID_REGISTRY = new ShortIdRegistry(6);
+    private final Map<Identifier, FieldDefinition> FIELDS = new ConcurrentHashMap<>();
+    private final ShortIdRegistry ID_REGISTRY = new ShortIdRegistry(6);
 
     // 🌟 注入的儲存介面
-    private static DataStorage<Identifier, FieldDefinition> storage;
+    private DataStorage<Identifier, FieldDefinition> storage;
 
     private FieldManager() {}
 
-    public static void install() {
+    public void install() {
         install(new NbtFieldStorage());
     }
 
-    public static void install(DataStorage<Identifier, FieldDefinition> storageProvider) {
+    public void install(DataStorage<Identifier, FieldDefinition> storageProvider) {
         storage = storageProvider;
 
         // 1. 伺服器啟動時，初始化儲存並載入記憶體
@@ -61,7 +65,7 @@ public final class FieldManager {
         });
     }
 
-    public static FieldDefinition register(FieldDefinition field) {
+    public FieldDefinition register(FieldDefinition field) {
         Objects.requireNonNull(field, "field 不得為空");
 
         if (!validate(field)) {
@@ -71,7 +75,7 @@ public final class FieldManager {
         FIELDS.put(field.id(), field);
         String shortId = ID_REGISTRY.generateAndBind(field.id());
         if (storage != null) storage.save(field.id(), field); // 同步至資料庫
-        DebugLogManager.log(DebugFeature.FIELD,
+        DebugLogManager.INSTANCE.log(DebugFeature.FIELD,
                 "register id=" + field.id() + ",shortId=" + shortId + ",dim=" + field.dimensionId()
                         + ",min=(" + field.bounds().minX + "," + field.bounds().minY + "," + field.bounds().minZ + ")"
                         + ",max=(" + field.bounds().maxX + "," + field.bounds().maxY + "," + field.bounds().maxZ + ")");
@@ -79,7 +83,7 @@ public final class FieldManager {
         return field;
     }
 
-    public static boolean validate(FieldDefinition field) {
+    public boolean validate(FieldDefinition field) {
         if (field == null || field.id() == null || field.dimensionId() == null || field.bounds() == null) {
             return false;
         }
@@ -100,30 +104,30 @@ public final class FieldManager {
         return true;
     }
 
-    public static void unregister(Identifier fieldId) {
-        DebugLogManager.log(DebugFeature.FIELD, "unregister id=" + fieldId + ",shortId=" + ID_REGISTRY.getShortId(fieldId));
+    public void unregister(Identifier fieldId) {
+        DebugLogManager.INSTANCE.log(DebugFeature.FIELD, "unregister id=" + fieldId + ",shortId=" + ID_REGISTRY.getShortId(fieldId));
         if (storage != null) storage.delete(fieldId);
         FIELDS.remove(fieldId);
         ID_REGISTRY.unbind(fieldId);
     }
 
-    public static FieldDefinition get(Identifier fieldId) {
+    public FieldDefinition get(Identifier fieldId) {
         return FIELDS.get(fieldId);
     }
 
     public static Map<Identifier, FieldDefinition> all() {
-        return Map.copyOf(FIELDS);
+        return Map.copyOf(fields);
     }
 
-    public static Identifier resolveShortId(String shortId) {
+    public Identifier resolveShortId(String shortId) {
         return ID_REGISTRY.getFullId(shortId);
     }
 
-    public static String getShortIdOf(Identifier fullId) {
+    public String getShortIdOf(Identifier fullId) {
         return ID_REGISTRY.getShortId(fullId);
     }
 
-    public static Optional<FieldDefinition> findAt(Identifier dimensionId, Vec3 pos) {
+    public Optional<FieldDefinition> findAt(Identifier dimensionId, Vec3 pos) {
         if (dimensionId == null || pos == null) return Optional.empty();
 
         for (FieldDefinition field : FIELDS.values()) {
@@ -134,7 +138,7 @@ public final class FieldManager {
         return Optional.empty();
     }
 
-    public static void save() {
+    public void save() {
         if (storage != null) {
             for (FieldDefinition field : FIELDS.values()) {
                 storage.save(field.id(), field);
@@ -142,7 +146,7 @@ public final class FieldManager {
         }
     }
 
-    public static void clear() {
+    public void clear() {
         FIELDS.clear();
         ID_REGISTRY.clear();
     }

@@ -1,4 +1,8 @@
 package com.myudog.myulib.client.api.ui.hud;
 
-public class HudManager {
+public final class HudManager {
+
+    public static final HudManager INSTANCE = new HudManager();
+
+    private HudManager() {}
 }

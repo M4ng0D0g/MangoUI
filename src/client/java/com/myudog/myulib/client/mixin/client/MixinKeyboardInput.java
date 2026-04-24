@@ -21,12 +21,12 @@ public class MixinKeyboardInput {
         }
 
         // Apply client-side control restrictions immediately for local input feel.
-        ClientControlManager.applyClientInputGuards(minecraft);
+        ClientControlManager.INSTANCE.applyClientInputGuards(minecraft);
 
         // 如果玩家目前正在「遙控」別的生物
-        if (ClientControlManager.isControlling()) {
+        if (ClientControlManager.INSTANCE.isControlling()) {
             // 1. 把真正的按鍵狀態發送給伺服器
-            ClientControlManager.sendInput(
+            ClientControlManager.INSTANCE.sendInput(
                     minecraft.options.keyUp.isDown(),
                     minecraft.options.keyDown.isDown(),
                     minecraft.options.keyLeft.isDown(),

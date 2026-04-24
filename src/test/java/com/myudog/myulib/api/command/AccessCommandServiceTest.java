@@ -57,6 +57,14 @@ final class AccessCommandServiceTest {
         protected EventDispatcherImpl createEventBus() {
             return new EventDispatcherImpl();
         }
+
+        @Override
+        protected void bindBehavior(GameInstance<GameConfig, TestData, TestState> instance) {
+        }
+
+        @Override
+        protected void unbindBehavior(GameInstance<GameConfig, TestData, TestState> instance) {
+        }
     }
 
     private static final class StubGameInstance extends GameInstance<GameConfig, TestData, TestState> {
@@ -119,7 +127,7 @@ final class AccessCommandServiceTest {
         }
 
         @Override
-        public boolean end() {
+        public boolean shutdown() {
             if (!enabled) {
                 return false;
             }
@@ -156,9 +164,9 @@ final class AccessCommandServiceTest {
 
     @Test
     void accessServiceHelpersCreateAndPersistAccessData() {
-        RoleGroupManager.clear();
-        PermissionManager.clear();
-        FieldManager.clear();
+        RoleGroupManager.INSTANCE.clear();
+        PermissionManager.INSTANCE.clear();
+        FieldManager.INSTANCE.clear();
         CommandRegistry.clear();
         assertDoesNotThrow(AccessCommandService::registerDefaults,
                 "registerDefaults should only attach the command callback");
@@ -166,11 +174,11 @@ final class AccessCommandServiceTest {
                 "registerDefaults should register the /myulib: local command mirror");
         Identifier builderId = Identifier.fromNamespaceAndPath("myulib", "builders");
         AccessCommandService.createRoleGroup(builderId, Component.literal("Builders"), 7);
-        assertEquals("Builders", RoleGroupManager.get(builderId).translationKey().getString(),
+        assertEquals("Builders", RoleGroupManager.INSTANCE.get(builderId).translationKey().getString(),
                 "createRoleGroup should register the new group");
         AccessCommandService.grantGlobalPermission("builders", PermissionAction.BLOCK_PLACE, PermissionDecision.ALLOW);
         assertEquals(PermissionDecision.ALLOW,
-                PermissionManager.global().forGroup("builders").get(PermissionAction.BLOCK_PLACE),
+                PermissionManager.INSTANCE.global().forGroup("builders").get(PermissionAction.BLOCK_PLACE),
                 "grantGlobalPermission should update the global permission table");
         Identifier fieldId = Identifier.fromNamespaceAndPath("tests", "spawn");
         FieldDefinition field = new FieldDefinition(
@@ -180,13 +188,13 @@ final class AccessCommandServiceTest {
                 Map.of("label", "Spawn")
         );
         AccessCommandService.createField(field);
-        assertEquals(field, FieldManager.get(fieldId), "createField should register the field");
+        assertEquals(field, FieldManager.INSTANCE.get(fieldId), "createField should register the field");
         assertTrue(AccessCommandService.listRoleGroups().stream().anyMatch(group -> group.id().equals(builderId)),
                 "listRoleGroups should include the created group");
         AccessCommandService.deleteField(fieldId);
         AccessCommandService.deleteRoleGroup(builderId);
-        assertNull(FieldManager.get(fieldId), "deleteField should remove the field");
-        assertNull(RoleGroupManager.get(builderId), "deleteRoleGroup should remove the role group");
+        assertNull(FieldManager.INSTANCE.get(fieldId), "deleteField should remove the field");
+        assertNull(RoleGroupManager.INSTANCE.get(builderId), "deleteRoleGroup should remove the role group");
 
         CommandResult save = CommandRegistry.execute(new CommandContext("console", "myulib:save", Map.of()));
         assertTrue(save.success(), "The mirrored myulib:save command should execute successfully");
@@ -224,12 +232,12 @@ final class AccessCommandServiceTest {
             assertEquals("game=ended:" + instanceId, endResult.message(), "End output should include ended instance id");
 
             CommandResult readAfterEnd = CommandRegistry.execute(new CommandContext("console", "myulib:game:read", Map.of("id", token)));
-            assertFalse(readAfterEnd.success(), "myulib:game:read should fail after the instance is ended");
-            assertEquals("game=not_found", readAfterEnd.message(), "Read after end should report not_found");
+            assertTrue(readAfterEnd.success(), "myulib:game:read should still resolve after end for recycled instances");
+            assertTrue(readAfterEnd.message().contains("enabled:false"), "Read after end should expose disabled/recycled lifecycle state");
 
             CommandResult endAgain = CommandRegistry.execute(new CommandContext("console", "myulib:game:end", Map.of("id", token)));
-            assertFalse(endAgain.success(), "myulib:game:end should fail when the token no longer resolves");
-            assertEquals("game=not_found", endAgain.message(), "Repeated end should report not_found");
+            assertFalse(endAgain.success(), "myulib:game:end should fail when the instance is no longer endable");
+            assertEquals("game=end_failed_or_not_found", endAgain.message(), "Repeated end should report end_failed_or_not_found");
         } finally {
             instances.remove(instanceId);
             tokens.remove(token);

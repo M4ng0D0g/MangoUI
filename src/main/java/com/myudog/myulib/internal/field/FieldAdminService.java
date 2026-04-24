@@ -21,7 +21,7 @@ public class FieldAdminService {
 
 //        try {
 //            // 2. 呼叫我們唯一且核心的 FieldManager 進行註冊
-//            FieldManager.register(field);
+//            FieldManager.INSTANCE.register(field);
 //            return true;
 //        } catch (IllegalArgumentException e) {
 //            // 捕捉重疊錯誤，回傳給指令系統

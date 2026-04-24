@@ -19,47 +19,47 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class AccessSystemsTest {
     @Test
     void fieldIdentityAndPermissionFlowWorks() {
-        FieldManager.clear();
-        RoleGroupManager.clear();
-        PermissionManager.clear();
-        RoleGroupManager.install();
+        FieldManager.INSTANCE.clear();
+        RoleGroupManager.INSTANCE.clear();
+        PermissionManager.INSTANCE.clear();
+        RoleGroupManager.INSTANCE.install();
         Identifier spawnId = Identifier.fromNamespaceAndPath("mygames", "spawn");
         Identifier overworld = Identifier.fromNamespaceAndPath("minecraft", "overworld");
         Identifier nether = Identifier.fromNamespaceAndPath("minecraft", "the_nether");
         AABB spawnBounds = new AABB(0, 0, 0, 10, 10, 10);
-        FieldManager.register(new FieldDefinition(
+        FieldManager.INSTANCE.register(new FieldDefinition(
                 spawnId,
                 overworld,
                 spawnBounds,
                 Map.of("label", "Spawn")
         ));
-        FieldManager.unregister(spawnId);
-        FieldManager.register(new FieldDefinition(
+        FieldManager.INSTANCE.unregister(spawnId);
+        FieldManager.INSTANCE.register(new FieldDefinition(
                 spawnId,
                 nether,
                 spawnBounds,
                 Map.of("label", "Spawn")
         ));
-        assertEquals(nether, FieldManager.get(spawnId).dimensionId(), "Field dimension should update after re-registration");
+        assertEquals(nether, FieldManager.INSTANCE.get(spawnId).dimensionId(), "Field dimension should update after re-registration");
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-000000000123");
         Identifier builderId = Identifier.fromNamespaceAndPath("myulib", "builder");
-        RoleGroupManager.register(new RoleGroupDefinition(
+        RoleGroupManager.INSTANCE.register(new RoleGroupDefinition(
                 builderId,
                 Component.literal("Builder"),
                 10,
                 Map.of(),
                 new HashSet<>()
         ));
-        RoleGroupManager.assign(playerId, builderId);
-        List<String> playerGroups = RoleGroupManager.getSortedGroupIdsOf(playerId);
+        RoleGroupManager.INSTANCE.assign(playerId, builderId);
+        List<String> playerGroups = RoleGroupManager.INSTANCE.getSortedGroupIdsOf(playerId);
         assertTrue(playerGroups.contains("builder"), "Player should be assigned to the builder role group");
         assertTrue(playerGroups.contains("everyone"), "Player should always include the everyone role group");
         PermissionAction buildAction = PermissionAction.BLOCK_PLACE;
         PermissionAction mineAction = PermissionAction.BLOCK_BREAK;
-        PermissionManager.global().forGroup("builder").set(buildAction, PermissionDecision.ALLOW);
-        PermissionManager.field(spawnId).forGroup("builder").set(buildAction, PermissionDecision.UNSET);
-        PermissionManager.global().forPlayer(playerId).set(mineAction, PermissionDecision.DENY);
-        PermissionDecision finalBuildDecision = PermissionManager.evaluate(
+        PermissionManager.INSTANCE.global().forGroup("builder").set(buildAction, PermissionDecision.ALLOW);
+        PermissionManager.INSTANCE.field(spawnId).forGroup("builder").set(buildAction, PermissionDecision.UNSET);
+        PermissionManager.INSTANCE.global().forPlayer(playerId).set(mineAction, PermissionDecision.DENY);
+        PermissionDecision finalBuildDecision = PermissionManager.INSTANCE.evaluate(
                 playerId,
                 playerGroups,
                 buildAction,
@@ -68,7 +68,7 @@ final class AccessSystemsTest {
         );
         assertEquals(PermissionDecision.ALLOW, finalBuildDecision,
                 "Player should inherit the global BUILD allow when field scope is unset");
-        PermissionDecision finalMineDecision = PermissionManager.evaluate(
+        PermissionDecision finalMineDecision = PermissionManager.INSTANCE.evaluate(
                 playerId,
                 playerGroups,
                 mineAction,

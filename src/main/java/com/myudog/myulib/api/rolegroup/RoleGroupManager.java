@@ -16,21 +16,25 @@ import java.util.function.UnaryOperator;
 
 public final class RoleGroupManager {
 
+    public static final RoleGroupManager INSTANCE = new RoleGroupManager();
+
+    
+
     // 🌟 記憶體狀態
-    private static final Map<Identifier, RoleGroupDefinition> GROUPS = new ConcurrentHashMap<>();
-    private static final Map<UUID, Set<Identifier>> PLAYER_GROUPS = new ConcurrentHashMap<>();
-    private static final ShortIdRegistry ID_REGISTRY = new ShortIdRegistry(6);
+    private final Map<Identifier, RoleGroupDefinition> GROUPS = new ConcurrentHashMap<>();
+    private final Map<UUID, Set<Identifier>> PLAYER_GROUPS = new ConcurrentHashMap<>();
+    private final ShortIdRegistry ID_REGISTRY = new ShortIdRegistry(6);
 
     // 🌟 注入你的專用 Storage 介面 (作為 DAO)
-    private static RoleGroupStorage storage;
+    private RoleGroupStorage storage;
 
     private RoleGroupManager() {}
 
-    public static void install() {
+    public void install() {
         install(new NbtRoleGroupStorage());
     }
 
-    public static void install(RoleGroupStorage storageProvider) {
+    public void install(RoleGroupStorage storageProvider) {
         storage = storageProvider;
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -60,24 +64,24 @@ public final class RoleGroupManager {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> clear());
     }
 
-    public static RoleGroupDefinition register(RoleGroupDefinition group) {
+    public RoleGroupDefinition register(RoleGroupDefinition group) {
         if (!validate(group)) {
             throw new IllegalArgumentException("RoleGroupDefinition 驗證失敗: " + (group == null ? "null" : group.id()));
         }
 
         GROUPS.put(group.id(), group);
         String shortId = ID_REGISTRY.generateAndBind(group.id());
-        DebugLogManager.log(DebugFeature.ROLEGROUP,
+        DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP,
                 "register id=" + group.id() + ",shortId=" + shortId + ",priority=" + group.priority());
         if (storage != null) storage.saveGroup(group);
         return group;
     }
 
-    public static boolean validate(RoleGroupDefinition group) {
+    public boolean validate(RoleGroupDefinition group) {
         return group != null && group.id() != null && !GROUPS.containsKey(group.id());
     }
 
-    public static RoleGroupDefinition update(Identifier groupId, UnaryOperator<RoleGroupDefinition> updater) {
+    public RoleGroupDefinition update(Identifier groupId, UnaryOperator<RoleGroupDefinition> updater) {
         RoleGroupDefinition existing = GROUPS.get(groupId);
         if (existing == null) return null;
         RoleGroupDefinition updated = updater.apply(existing);
@@ -86,8 +90,8 @@ public final class RoleGroupManager {
         return updated;
     }
 
-    public static RoleGroupDefinition delete(Identifier groupId) {
-        DebugLogManager.log(DebugFeature.ROLEGROUP, "delete id=" + groupId + ",shortId=" + ID_REGISTRY.getShortId(groupId));
+    public RoleGroupDefinition delete(Identifier groupId) {
+        DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "delete id=" + groupId + ",shortId=" + ID_REGISTRY.getShortId(groupId));
         if (storage != null) storage.deleteGroup(groupId);
         ID_REGISTRY.unbind(groupId);
 
@@ -96,22 +100,22 @@ public final class RoleGroupManager {
         return GROUPS.remove(groupId);
     }
 
-    public static RoleGroupDefinition get(Identifier groupId) { return GROUPS.get(groupId); }
-    public static List<RoleGroupDefinition> groups() { return List.copyOf(GROUPS.values()); }
+    public RoleGroupDefinition get(Identifier groupId) { return GROUPS.get(groupId); }
+    public List<RoleGroupDefinition> groups() { return List.copyOf(GROUPS.values()); }
 
-    public static boolean assign(UUID playerId, Identifier groupId) {
+    public boolean assign(UUID playerId, Identifier groupId) {
         boolean added = PLAYER_GROUPS.computeIfAbsent(playerId, k -> new LinkedHashSet<>()).add(groupId);
         if (added) {
-            DebugLogManager.log(DebugFeature.ROLEGROUP, "assign player=" + playerId + " -> group=" + groupId);
+            DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "assign player=" + playerId + " -> group=" + groupId);
         }
         if (added && storage != null) storage.saveAssignments(playerId, PLAYER_GROUPS.get(playerId));
         return added;
     }
 
-    public static boolean revoke(UUID playerId, Identifier groupId) {
+    public boolean revoke(UUID playerId, Identifier groupId) {
         Set<Identifier> groups = PLAYER_GROUPS.get(playerId);
         if (groups != null && groups.remove(groupId)) {
-            DebugLogManager.log(DebugFeature.ROLEGROUP, "revoke player=" + playerId + " -> group=" + groupId);
+            DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "revoke player=" + playerId + " -> group=" + groupId);
             if (storage != null) storage.saveAssignments(playerId, groups);
             return true;
         }
@@ -120,7 +124,7 @@ public final class RoleGroupManager {
 
     // --- 🎯 雙向查詢系統 (全記憶體運算，瞬間完成) ---
 
-    public static Set<UUID> getPlayersInGroup(String groupId) {
+    public Set<UUID> getPlayersInGroup(String groupId) {
         Identifier targetId = toIdentifier(groupId);
         Set<UUID> result = new HashSet<>();
         for (Map.Entry<UUID, Set<Identifier>> entry : PLAYER_GROUPS.entrySet()) {
@@ -131,7 +135,7 @@ public final class RoleGroupManager {
         return result;
     }
 
-    public static List<String> getSortedGroupIdsOf(UUID playerId) {
+    public List<String> getSortedGroupIdsOf(UUID playerId) {
         Set<Identifier> assignedIds = PLAYER_GROUPS.getOrDefault(playerId, Set.of());
 
         List<RoleGroupDefinition> assignedGroups = new ArrayList<>();
@@ -154,15 +158,15 @@ public final class RoleGroupManager {
         return sortedIds;
     }
 
-    public static Identifier resolveShortId(String shortId) {
+    public Identifier resolveShortId(String shortId) {
         return ID_REGISTRY.getFullId(shortId);
     }
 
-    public static String getShortIdOf(Identifier fullId) {
+    public String getShortIdOf(Identifier fullId) {
         return ID_REGISTRY.getShortId(fullId);
     }
 
-    private static Identifier toIdentifier(String groupId) {
+    private Identifier toIdentifier(String groupId) {
         if (groupId == null || groupId.isBlank()) {
             return Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "everyone");
         }
@@ -172,18 +176,18 @@ public final class RoleGroupManager {
         return Identifier.fromNamespaceAndPath(Myulib.MOD_ID, groupId);
     }
 
-    private static String toGroupName(Identifier id) {
+    private String toGroupName(Identifier id) {
         if (id == null) {
             return "";
         }
         return Myulib.MOD_ID.equals(id.getNamespace()) ? id.getPath() : id.toString();
     }
 
-    public static void save() {
+    public void save() {
         // 如果有批次存檔需求可實作
     }
 
-    public static void clear() {
+    public void clear() {
         GROUPS.clear();
         PLAYER_GROUPS.clear();
         ID_REGISTRY.clear();

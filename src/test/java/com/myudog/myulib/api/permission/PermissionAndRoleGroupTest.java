@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class PermissionAndRoleGroupTest {
     @BeforeEach
     void reset() {
-        RoleGroupManager.clear();
-        PermissionManager.clear();
-        RoleGroupManager.install();
+        RoleGroupManager.INSTANCE.clear();
+        PermissionManager.INSTANCE.clear();
+        RoleGroupManager.INSTANCE.install();
     }
     @Test
     void roleGroupDefinitionsNormalizeAndMembersAreResolved() {
@@ -31,11 +31,11 @@ final class PermissionAndRoleGroupTest {
         );
         assertEquals("Builders", builder.translationKey().getString(), "Display component should be preserved");
         assertTrue(builder.hasMember(playerId), "The constructor should preserve the member set");
-        RoleGroupManager.register(builder);
-        assertTrue(RoleGroupManager.assign(playerId, builderId), "The player should be assignable to the builders group");
-        assertEquals(List.of("builders", "everyone"), RoleGroupManager.getSortedGroupIdsOf(playerId),
+        RoleGroupManager.INSTANCE.register(builder);
+        assertTrue(RoleGroupManager.INSTANCE.assign(playerId, builderId), "The player should be assignable to the builders group");
+        assertEquals(List.of("builders", "everyone"), RoleGroupManager.INSTANCE.getSortedGroupIdsOf(playerId),
                 "Builders should be ordered before everyone");
-        assertTrue(RoleGroupManager.getPlayersInGroup("builders").contains(playerId),
+        assertTrue(RoleGroupManager.INSTANCE.getPlayersInGroup("builders").contains(playerId),
                 "The player should appear in the builders member list");
     }
     @Test
@@ -44,15 +44,15 @@ final class PermissionAndRoleGroupTest {
         List<String> groups = List.of("builders", "everyone");
         Identifier fieldId = Identifier.fromNamespaceAndPath("tests", "spawn");
         Identifier dimensionId = Identifier.fromNamespaceAndPath("minecraft", "overworld");
-        PermissionManager.global().forGroup("builders").set(PermissionAction.BLOCK_PLACE, PermissionDecision.ALLOW);
-        PermissionManager.field(fieldId).forGroup("builders").set(PermissionAction.BLOCK_PLACE, PermissionDecision.UNSET);
-        PermissionManager.dimension(dimensionId).forGroup("builders").set(PermissionAction.BLOCK_BREAK, PermissionDecision.ALLOW);
-        PermissionManager.field(fieldId).forPlayer(playerId).set(PermissionAction.BLOCK_BREAK, PermissionDecision.DENY);
+        PermissionManager.INSTANCE.global().forGroup("builders").set(PermissionAction.BLOCK_PLACE, PermissionDecision.ALLOW);
+        PermissionManager.INSTANCE.field(fieldId).forGroup("builders").set(PermissionAction.BLOCK_PLACE, PermissionDecision.UNSET);
+        PermissionManager.INSTANCE.dimension(dimensionId).forGroup("builders").set(PermissionAction.BLOCK_BREAK, PermissionDecision.ALLOW);
+        PermissionManager.INSTANCE.field(fieldId).forPlayer(playerId).set(PermissionAction.BLOCK_BREAK, PermissionDecision.DENY);
         assertEquals(PermissionDecision.ALLOW,
-                PermissionManager.evaluate(playerId, groups, PermissionAction.BLOCK_PLACE, fieldId, dimensionId),
+                PermissionManager.INSTANCE.evaluate(playerId, groups, PermissionAction.BLOCK_PLACE, fieldId, dimensionId),
                 "Unset field rules should fall back to the global allow");
         assertEquals(PermissionDecision.DENY,
-                PermissionManager.evaluate(playerId, groups, PermissionAction.BLOCK_BREAK, fieldId, dimensionId),
+                PermissionManager.INSTANCE.evaluate(playerId, groups, PermissionAction.BLOCK_BREAK, fieldId, dimensionId),
                 "Field-level player deny should override dimension allow");
     }
 }

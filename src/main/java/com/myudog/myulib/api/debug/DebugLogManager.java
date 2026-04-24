@@ -12,15 +12,19 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DebugLogManager {
-    private static final Set<UUID> ENABLED_PLAYERS = ConcurrentHashMap.newKeySet();
-    private static final Map<UUID, EnumSet<DebugFeature>> PLAYER_FEATURES = new ConcurrentHashMap<>();
-    private static volatile MinecraftServer server;
-    private static volatile boolean installed;
+
+    public static final DebugLogManager INSTANCE = new DebugLogManager();
+
+    
+    private final Set<UUID> ENABLED_PLAYERS = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, EnumSet<DebugFeature>> PLAYER_FEATURES = new ConcurrentHashMap<>();
+    private volatile MinecraftServer server;
+    private volatile boolean installed;
 
     private DebugLogManager() {
     }
 
-    public static void install() {
+    public void install() {
         if (installed) {
             return;
         }
@@ -33,7 +37,7 @@ public final class DebugLogManager {
         });
     }
 
-    public static void enable(UUID playerId) {
+    public void enable(UUID playerId) {
         if (playerId == null) {
             return;
         }
@@ -41,18 +45,18 @@ public final class DebugLogManager {
         PLAYER_FEATURES.computeIfAbsent(playerId, ignored -> EnumSet.allOf(DebugFeature.class));
     }
 
-    public static void disable(UUID playerId) {
+    public void disable(UUID playerId) {
         if (playerId == null) {
             return;
         }
         ENABLED_PLAYERS.remove(playerId);
     }
 
-    public static boolean isEnabled(UUID playerId) {
+    public boolean isEnabled(UUID playerId) {
         return playerId != null && ENABLED_PLAYERS.contains(playerId);
     }
 
-    public static void setFeature(UUID playerId, DebugFeature feature, boolean enabled) {
+    public void setFeature(UUID playerId, DebugFeature feature, boolean enabled) {
         if (playerId == null || feature == null) {
             return;
         }
@@ -64,7 +68,7 @@ public final class DebugLogManager {
         }
     }
 
-    public static void setAll(UUID playerId, boolean enabled) {
+    public void setAll(UUID playerId, boolean enabled) {
         if (playerId == null) {
             return;
         }
@@ -75,7 +79,7 @@ public final class DebugLogManager {
         }
     }
 
-    public static Set<DebugFeature> getFeatures(UUID playerId) {
+    public Set<DebugFeature> getFeatures(UUID playerId) {
         EnumSet<DebugFeature> set = PLAYER_FEATURES.get(playerId);
         if (set == null) {
             return Set.of();
@@ -83,7 +87,7 @@ public final class DebugLogManager {
         return Set.copyOf(set);
     }
 
-    public static void log(DebugFeature feature, String message) {
+    public void log(DebugFeature feature, String message) {
         MinecraftServer current = server;
         if (current == null || feature == null || message == null || message.isBlank()) {
             return;

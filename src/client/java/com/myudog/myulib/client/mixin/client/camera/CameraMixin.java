@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class CameraMixin {
     @Inject(method = "update", at = @At("TAIL"))
     private void myulib$applyCameraModifiers(DeltaTracker deltaTracker, CallbackInfo ci) {
-        ClientCameraManager.getInstance().applyAll((Camera) (Object) this, 1.0f);
+        ClientCameraManager.INSTANCE.getInstance().applyAll((Camera) (Object) this, 1.0f);
     }
 }
 

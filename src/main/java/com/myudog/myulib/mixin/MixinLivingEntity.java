@@ -44,25 +44,25 @@ public class MixinLivingEntity {
 
         if (source.getEntity() instanceof ServerPlayer attacker) {
             PermissionAction action = classifyAttackAction(victim);
-            DebugTraceManager.begin(attacker, "hurtServer");
-            DebugTraceManager.step(attacker, "action=" + action);
-            DebugTraceManager.step(attacker, "victim=" + victim.getType());
+            DebugTraceManager.INSTANCE.begin(attacker, "hurtServer");
+            DebugTraceManager.INSTANCE.step(attacker, "action=" + action);
+            DebugTraceManager.INSTANCE.step(attacker, "victim=" + victim.getType());
             PermissionDecision decision = PermissionGate.evaluateDecision(attacker, action, victim.position());
-            DebugTraceManager.step(attacker, "decision=" + decision);
-            DebugLogManager.log(DebugFeature.PERMISSION,
+            DebugTraceManager.INSTANCE.step(attacker, "decision=" + decision);
+            DebugLogManager.INSTANCE.log(DebugFeature.PERMISSION,
                     "hurtServer action=" + action + ",decision=" + decision
                             + ",attacker=" + attacker.getName().getString()
                             + ",victim=" + victim.getType());
             if (decision == PermissionDecision.DENY) {
                 cir.setReturnValue(false);
-                DebugTraceManager.end(attacker, "result=DENY");
+                DebugTraceManager.INSTANCE.end(attacker, "result=DENY");
                 return;
             }
-            DebugTraceManager.end(attacker, "result=ALLOW");
+            DebugTraceManager.INSTANCE.end(attacker, "result=ALLOW");
         }
 
         if (victim instanceof ServerPlayer victimPlayer) {
-            DebugLogManager.log(DebugFeature.PERMISSION,
+            DebugLogManager.INSTANCE.log(DebugFeature.PERMISSION,
                     "received_damage victim=" + victimPlayer.getName().getString()
                             + ",source=" + source.getMsgId() + ",amount=" + amount);
         }
@@ -76,7 +76,7 @@ public class MixinLivingEntity {
         if (source.getEntity() instanceof ServerPlayer attacker) {
             PermissionAction action = classifyAttackAction(victim);
             PermissionDecision decision = PermissionGate.evaluateDecision(attacker, action, victim.position());
-            DebugLogManager.log(DebugFeature.PERMISSION,
+            DebugLogManager.INSTANCE.log(DebugFeature.PERMISSION,
                     "hurt action=" + action + ",decision=" + decision
                             + ",attacker=" + attacker.getName().getString()
                             + ",victim=" + victim.getType());

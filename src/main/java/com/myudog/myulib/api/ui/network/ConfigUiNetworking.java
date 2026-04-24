@@ -177,12 +177,12 @@ public final class ConfigUiNetworking {
             int priority = roleGroupOrder.size();
             for (JsonElement element : roleGroupOrder) {
                 Identifier id = Identifier.parse(element.getAsString());
-                RoleGroupDefinition group = RoleGroupManager.get(id);
+                RoleGroupDefinition group = RoleGroupManager.INSTANCE.get(id);
                 if (group == null) {
                     continue;
                 }
                 int updatedPriority = priority--;
-                RoleGroupManager.update(id, old -> new RoleGroupDefinition(
+                RoleGroupManager.INSTANCE.update(id, old -> new RoleGroupDefinition(
                         old.id(),
                         old.translationKey(),
                         updatedPriority,
@@ -190,14 +190,14 @@ public final class ConfigUiNetworking {
                         old.members()
                 ));
             }
-            RoleGroupManager.save();
+            RoleGroupManager.INSTANCE.save();
         }
 
         JsonObject fieldNames = root.getAsJsonObject("fieldNames");
         if (fieldNames != null) {
             for (Map.Entry<String, JsonElement> entry : fieldNames.entrySet()) {
                 Identifier fieldId = Identifier.parse(entry.getKey());
-                FieldDefinition existing = FieldManager.get(fieldId);
+                FieldDefinition existing = FieldManager.INSTANCE.get(fieldId);
                 if (existing == null) {
                     continue;
                 }
@@ -208,10 +208,10 @@ public final class ConfigUiNetworking {
                 } else {
                     newData.put("name", fieldName);
                 }
-                FieldManager.unregister(fieldId);
-                FieldManager.register(new FieldDefinition(existing.id(), existing.dimensionId(), existing.bounds(), newData));
+                FieldManager.INSTANCE.unregister(fieldId);
+                FieldManager.INSTANCE.register(new FieldDefinition(existing.id(), existing.dimensionId(), existing.bounds(), newData));
             }
-            FieldManager.save();
+            FieldManager.INSTANCE.save();
         }
 
         JsonArray permissionPatches = root.getAsJsonArray("permissionPatches");
@@ -223,25 +223,25 @@ public final class ConfigUiNetworking {
 
                 ScopeLayer scope = ScopeLayer.valueOf(patch.get("scope").getAsString().toUpperCase());
                 String scopeIdRaw = patch.has("scopeId") ? patch.get("scopeId").getAsString() : "";
-                String group = PermissionManager.normalizeGroupName(patch.get("group").getAsString());
+                String group = PermissionManager.INSTANCE.normalizeGroupName(patch.get("group").getAsString());
                 PermissionAction action = PermissionAction.valueOf(patch.get("action").getAsString().toUpperCase());
                 PermissionDecision decision = PermissionDecision.valueOf(patch.get("decision").getAsString().toUpperCase());
 
                 switch (scope) {
-                    case GLOBAL -> PermissionManager.global().forGroup(group).set(action, decision);
+                    case GLOBAL -> PermissionManager.INSTANCE.global().forGroup(group).set(action, decision);
                     case DIMENSION -> {
                         Identifier dimId = parseScopeIdentifier(scopeIdRaw, "minecraft");
-                        PermissionManager.dimension(dimId).forGroup(group).set(action, decision);
+                        PermissionManager.INSTANCE.dimension(dimId).forGroup(group).set(action, decision);
                     }
                     case FIELD -> {
                         Identifier fieldId = parseScopeIdentifier(scopeIdRaw, Myulib.MOD_ID);
-                        PermissionManager.field(fieldId).forGroup(group).set(action, decision);
+                        PermissionManager.INSTANCE.field(fieldId).forGroup(group).set(action, decision);
                     }
                     case USER -> {
                     }
                 }
             }
-            PermissionManager.save();
+            PermissionManager.INSTANCE.save();
         }
     }
 
@@ -250,7 +250,7 @@ public final class ConfigUiNetworking {
         root.addProperty("readonly", readonly);
 
         JsonArray roleGroups = new JsonArray();
-        List<RoleGroupDefinition> sortedGroups = new ArrayList<>(RoleGroupManager.groups());
+        List<RoleGroupDefinition> sortedGroups = new ArrayList<>(RoleGroupManager.INSTANCE.groups());
         sortedGroups.sort(Comparator.comparingInt(RoleGroupDefinition::priority).reversed());
         for (RoleGroupDefinition group : sortedGroups) {
             JsonObject item = new JsonObject();
@@ -263,7 +263,7 @@ public final class ConfigUiNetworking {
         root.add("roleGroups", roleGroups);
 
         JsonObject permissions = new JsonObject();
-        PermissionScope global = PermissionManager.global();
+        PermissionScope global = PermissionManager.INSTANCE.global();
         JsonArray globalGroups = new JsonArray();
         for (String groupName : global.groupTablesSnapshot().keySet()) {
             globalGroups.add(groupName);
@@ -271,7 +271,7 @@ public final class ConfigUiNetworking {
         permissions.add("globalGroups", globalGroups);
 
         JsonArray dimensions = new JsonArray();
-        for (Identifier id : PermissionManager.dimensionScopeIds()) {
+        for (Identifier id : PermissionManager.INSTANCE.dimensionScopeIds()) {
             JsonObject item = new JsonObject();
             item.addProperty("id", id.toString());
             item.addProperty("path", id.getPath());
@@ -280,11 +280,11 @@ public final class ConfigUiNetworking {
         permissions.add("dimensions", dimensions);
 
         JsonArray fields = new JsonArray();
-        for (Identifier id : PermissionManager.fieldScopeIds()) {
+        for (Identifier id : PermissionManager.INSTANCE.fieldScopeIds()) {
             JsonObject item = new JsonObject();
             item.addProperty("id", id.toString());
             item.addProperty("path", id.getPath());
-            FieldDefinition field = FieldManager.get(id);
+            FieldDefinition field = FieldManager.INSTANCE.get(id);
             Object maybeName = field == null ? null : field.fieldData().get("name");
             String resolvedName = maybeName == null ? id.getPath() : Objects.toString(maybeName, id.getPath());
             item.addProperty("name", resolvedName);

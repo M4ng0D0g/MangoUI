@@ -19,8 +19,8 @@ final class BreakBlockPermissionRegressionTest {
 
     @BeforeEach
     void reset() {
-        PermissionManager.clear();
-        RoleGroupManager.clear();
+        PermissionManager.INSTANCE.clear();
+        RoleGroupManager.INSTANCE.clear();
         CommandRegistry.clear();
     }
 
@@ -29,8 +29,8 @@ final class BreakBlockPermissionRegressionTest {
         UUID playerId = UUID.fromString("00000000-0000-0000-0000-00000000bb01");
 
         // Mock evaluate path: direct global rule assignment.
-        PermissionManager.global().forGroup("everyone").set(PermissionAction.BLOCK_BREAK, PermissionDecision.DENY);
-        PermissionDecision direct = PermissionManager.evaluate(
+        PermissionManager.INSTANCE.global().forGroup("everyone").set(PermissionAction.BLOCK_BREAK, PermissionDecision.DENY);
+        PermissionDecision direct = PermissionManager.INSTANCE.evaluate(
                 playerId,
                 List.of("everyone"),
                 PermissionAction.BLOCK_BREAK,
@@ -41,7 +41,7 @@ final class BreakBlockPermissionRegressionTest {
                 "Direct evaluate should deny break-block when everyone is DENY");
 
         // Command path: mirror command writes the same rule via AccessCommandService helpers.
-        PermissionManager.clear();
+        PermissionManager.INSTANCE.clear();
         AccessCommandService.registerDefaults();
         CommandResult setResult = CommandRegistry.execute(new CommandContext(
                 "console",
@@ -55,7 +55,7 @@ final class BreakBlockPermissionRegressionTest {
 
         assertTrue(setResult.success(), "Command path should accept permission:set-global");
 
-        PermissionDecision commandConfigured = PermissionManager.evaluate(
+        PermissionDecision commandConfigured = PermissionManager.INSTANCE.evaluate(
                 playerId,
                 List.of("everyone"),
                 PermissionAction.BLOCK_BREAK,
@@ -67,7 +67,7 @@ final class BreakBlockPermissionRegressionTest {
 
         // Group normalization regression: myulib prefix input should still match player group path value.
         AccessCommandService.grantGlobalPermission("myulib:test", PermissionAction.BLOCK_BREAK, PermissionDecision.DENY);
-        PermissionDecision normalizedGroupDecision = PermissionManager.evaluate(
+        PermissionDecision normalizedGroupDecision = PermissionManager.INSTANCE.evaluate(
                 playerId,
                 List.of("test", "everyone"),
                 PermissionAction.BLOCK_BREAK,

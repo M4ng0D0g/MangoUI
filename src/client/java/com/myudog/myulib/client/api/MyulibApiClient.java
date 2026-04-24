@@ -13,7 +13,7 @@ public class MyulibApiClient {
 
 	public static void init() {
 		ClientCameraBridge.installBridge();
-		ClientControlManager.install();
+		ClientControlManager.INSTANCE.install();
 		FieldVisualizationClientRenderer.install();
 		ConfigUiNetworking.registerPayloads();
 		ConfigUiClientNetworking.install();

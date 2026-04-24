@@ -34,11 +34,11 @@ public final class PermissionGate {
 
         Vec3 resolvedPosition = targetPosition == null ? player.position() : targetPosition;
         Identifier dimId = player.level().dimension().identifier();
-        Optional<FieldDefinition> field = FieldManager.findAt(dimId, resolvedPosition);
-        var groups = RoleGroupManager.getSortedGroupIdsOf(player.getUUID());
+        Optional<FieldDefinition> field = FieldManager.INSTANCE.findAt(dimId, resolvedPosition);
+        var groups = RoleGroupManager.INSTANCE.getSortedGroupIdsOf(player.getUUID());
         Identifier fieldId = field.map(FieldDefinition::id).orElse(null);
 
-        PermissionDecision decision = PermissionManager.evaluate(
+        PermissionDecision decision = PermissionManager.INSTANCE.evaluate(
                 player.getUUID(),
                 groups,
                 action,
@@ -48,7 +48,7 @@ public final class PermissionGate {
 
         // USE_ITEM acts as a master switch for use-like actions, except portal usage.
         if (decision != PermissionDecision.DENY && action != PermissionAction.USE_PORTAL && action != PermissionAction.USE_ITEM && isUseLikeAction(action)) {
-            PermissionDecision useItemDecision = PermissionManager.evaluate(
+            PermissionDecision useItemDecision = PermissionManager.INSTANCE.evaluate(
                     player.getUUID(),
                     groups,
                     PermissionAction.USE_ITEM,
@@ -60,7 +60,7 @@ public final class PermissionGate {
             }
         }
 
-        DebugLogManager.log(DebugFeature.PERMISSION,
+        DebugLogManager.INSTANCE.log(DebugFeature.PERMISSION,
                 "player=" + player.getName().getString()
                         + ",action=" + action
                         + ",decision=" + decision

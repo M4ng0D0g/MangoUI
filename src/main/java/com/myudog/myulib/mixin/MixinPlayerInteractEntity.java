@@ -35,9 +35,9 @@ public abstract class MixinPlayerInteractEntity {
         }
 
         if (serverPlayer != null) {
-            DebugTraceManager.begin(serverPlayer, "interactEntity");
-            DebugTraceManager.step(serverPlayer, "action=" + action);
-            DebugTraceManager.step(serverPlayer, "target=" + entity.getType());
+            DebugTraceManager.INSTANCE.begin(serverPlayer, "interactEntity");
+            DebugTraceManager.INSTANCE.step(serverPlayer, "action=" + action);
+            DebugTraceManager.INSTANCE.step(serverPlayer, "target=" + entity.getType());
         }
 
         PermissionDecision decision = serverPlayer != null
@@ -45,13 +45,13 @@ public abstract class MixinPlayerInteractEntity {
                 : (PermissionGate.isDenied(player, action, entity.position()) ? PermissionDecision.DENY : PermissionDecision.ALLOW);
 
         if (serverPlayer != null) {
-            DebugTraceManager.step(serverPlayer, "decision=" + decision);
+            DebugTraceManager.INSTANCE.step(serverPlayer, "decision=" + decision);
         }
 
         if (decision == PermissionDecision.DENY) {
             cir.setReturnValue(InteractionResult.FAIL);
             if (serverPlayer != null) {
-                DebugTraceManager.end(serverPlayer, "result=DENY");
+                DebugTraceManager.INSTANCE.end(serverPlayer, "result=DENY");
             }
             return;
         }
@@ -63,10 +63,10 @@ public abstract class MixinPlayerInteractEntity {
         boolean canceled = GameManager.handleEntityInteract(serverPlayer, entity, hand);
         if (canceled) {
             cir.setReturnValue(InteractionResult.SUCCESS);
-            DebugTraceManager.end(serverPlayer, "result=GAME_CONSUMED");
+            DebugTraceManager.INSTANCE.end(serverPlayer, "result=GAME_CONSUMED");
             return;
         }
 
-        DebugTraceManager.end(serverPlayer, "result=ALLOW");
+        DebugTraceManager.INSTANCE.end(serverPlayer, "result=ALLOW");
     }
 }

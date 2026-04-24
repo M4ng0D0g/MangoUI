@@ -44,24 +44,24 @@ public class MixinPlayerInteractionManager {
     // 🎯 攔截 1: 破壞方塊
     @Inject(method = "destroyBlock", at = @At("HEAD"), cancellable = true)
     private void onBlockBreak(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        DebugTraceManager.begin(player, "destroyBlock");
-        DebugTraceManager.step(player, "pos=" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
+        DebugTraceManager.INSTANCE.begin(player, "destroyBlock");
+        DebugTraceManager.INSTANCE.step(player, "pos=" + pos.getX() + "," + pos.getY() + "," + pos.getZ());
         PermissionDecision decision = PermissionGate.evaluateDecision(player, PermissionAction.BLOCK_BREAK, pos.getCenter());
-        DebugTraceManager.step(player, "decision=" + decision);
+        DebugTraceManager.INSTANCE.step(player, "decision=" + decision);
 
         if (decision == PermissionDecision.DENY) {
             cir.setReturnValue(false); // 取消破壞
-            DebugTraceManager.end(player, "result=DENY");
+            DebugTraceManager.INSTANCE.end(player, "result=DENY");
             return;
         }
 
         boolean canceled = GameManager.handleBlockBreak(player, pos, this.level);
         if (canceled) {
             cir.setReturnValue(false);
-            DebugTraceManager.end(player, "result=GAME_CONSUMED");
+            DebugTraceManager.INSTANCE.end(player, "result=GAME_CONSUMED");
             return;
         }
-        DebugTraceManager.end(player, "result=ALLOW");
+        DebugTraceManager.INSTANCE.end(player, "result=ALLOW");
     }
 
     // 🎯 攔截 2: 對方塊點擊右鍵 (放置方塊、開箱子、用水桶)
@@ -71,44 +71,44 @@ public class MixinPlayerInteractionManager {
         BlockState state = level.getBlockState(hitResult.getBlockPos());
         PermissionAction action = classifyBlockAction(state, stack);
 
-        DebugTraceManager.begin(player, "useItemOn");
-        DebugTraceManager.step(player, "action=" + action);
-        DebugTraceManager.step(player, "blockPos=" + hitResult.getBlockPos().getX() + "," + hitResult.getBlockPos().getY() + "," + hitResult.getBlockPos().getZ());
+        DebugTraceManager.INSTANCE.begin(player, "useItemOn");
+        DebugTraceManager.INSTANCE.step(player, "action=" + action);
+        DebugTraceManager.INSTANCE.step(player, "blockPos=" + hitResult.getBlockPos().getX() + "," + hitResult.getBlockPos().getY() + "," + hitResult.getBlockPos().getZ());
         PermissionDecision decision = PermissionGate.evaluateDecision(player, action, hitResult.getLocation());
-        DebugTraceManager.step(player, "decision=" + decision);
+        DebugTraceManager.INSTANCE.step(player, "decision=" + decision);
         if (decision == PermissionDecision.DENY) {
             cir.setReturnValue(InteractionResult.FAIL);
-            DebugTraceManager.end(player, "result=DENY");
+            DebugTraceManager.INSTANCE.end(player, "result=DENY");
             return;
         }
 
         boolean canceled = GameManager.handleBlockInteract(player, hitResult.getBlockPos(), this.level);
         if (canceled) {
             cir.setReturnValue(InteractionResult.SUCCESS);
-            DebugTraceManager.end(player, "result=GAME_CONSUMED");
+            DebugTraceManager.INSTANCE.end(player, "result=GAME_CONSUMED");
             return;
         }
-        DebugTraceManager.end(player, "result=ALLOW");
+        DebugTraceManager.INSTANCE.end(player, "result=ALLOW");
     }
 
     @Inject(method = "useItem", at = @At("HEAD"), cancellable = true, require = 0)
     private void onUseItem(ServerPlayer player, Level level, ItemStack stack, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         PermissionAction action = classifyItemAction(stack);
         ItemStack snapshot = stack.copy();
-        DebugTraceManager.begin(player, "useItem");
-        DebugTraceManager.step(player, "action=" + action);
+        DebugTraceManager.INSTANCE.begin(player, "useItem");
+        DebugTraceManager.INSTANCE.step(player, "action=" + action);
         PermissionDecision decision = PermissionGate.evaluateDecision(player, action, player.position());
-        DebugTraceManager.step(player, "decision=" + decision);
+        DebugTraceManager.INSTANCE.step(player, "decision=" + decision);
         if (decision == PermissionDecision.DENY) {
             // Keep held item unchanged when any item-use permission is denied.
             player.setItemInHand(hand, snapshot);
             player.getInventory().setChanged();
             player.containerMenu.broadcastChanges();
             cir.setReturnValue(InteractionResult.FAIL);
-            DebugTraceManager.end(player, "result=DENY");
+            DebugTraceManager.INSTANCE.end(player, "result=DENY");
             return;
         }
-        DebugTraceManager.end(player, "result=ALLOW");
+        DebugTraceManager.INSTANCE.end(player, "result=ALLOW");
     }
 
     private static PermissionAction classifyBlockAction(BlockState state, ItemStack stack) {

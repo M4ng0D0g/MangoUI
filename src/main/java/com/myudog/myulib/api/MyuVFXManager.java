@@ -6,10 +6,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 public final class MyuVFXManager {
+
+    public static final MyuVFXManager INSTANCE = new MyuVFXManager();
+
+    
     private MyuVFXManager() {
     }
 
-    public static void spawnSpiral(ServerLevel Level, Vec3 center, ParticleOptions particle) {
+    public void spawnSpiral(ServerLevel Level, Vec3 center, ParticleOptions particle) {
         EffectBuilder.spawnEffect(center, builder -> {
             builder.duration(40);
             builder.onTick(tick -> {
@@ -23,7 +27,7 @@ public final class MyuVFXManager {
         });
     }
 
-    public static void spawnShockwave(ServerLevel Level, Vec3 center, ParticleOptions particle) {
+    public void spawnShockwave(ServerLevel Level, Vec3 center, ParticleOptions particle) {
         EffectBuilder.spawnEffect(center, builder -> {
             builder.duration(15);
             builder.onTick(tick -> {

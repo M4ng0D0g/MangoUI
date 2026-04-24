@@ -41,9 +41,9 @@ public abstract class MixinServerPlayerControlPermission {
     @Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true, require = 0)
     private void onMovePlayer(ServerboundMovePlayerPacket packet, CallbackInfo ci) {
         boolean denyMove = packet.hasPosition()
-                && !ControlManager.isPlayerControlEnabled(player, ControlType.MOVE);
+                && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.MOVE);
         boolean denyLook = packet.hasRotation()
-                && !ControlManager.isPlayerControlEnabled(player, ControlType.ROTATE);
+                && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.ROTATE);
 
         if (denyMove || denyLook) {
             ci.cancel();
@@ -64,7 +64,7 @@ public abstract class MixinServerPlayerControlPermission {
         ServerboundPlayerCommandPacket.Action action = packet.getAction();
 
         if (action == ServerboundPlayerCommandPacket.Action.START_SPRINTING
-                && !ControlManager.isPlayerControlEnabled(player, ControlType.SPRINT)) {
+                && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.SPRINT)) {
             ci.cancel();
             player.setSprinting(false);
             return;
@@ -73,8 +73,8 @@ public abstract class MixinServerPlayerControlPermission {
         String actionName = action.name();
         boolean sneakStart = actionName.contains("SHIFT") || actionName.contains("SNEAK");
         if (sneakStart) {
-            boolean denySneak = !ControlManager.isPlayerControlEnabled(player, ControlType.SNEAK);
-            boolean denyCrawl = player.isSwimming() && !ControlManager.isPlayerControlEnabled(player, ControlType.CRAWL);
+            boolean denySneak = !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.SNEAK);
+            boolean denyCrawl = player.isSwimming() && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.CRAWL);
             if (denySneak || denyCrawl) {
                 ci.cancel();
                 player.setShiftKeyDown(false);
@@ -87,21 +87,21 @@ public abstract class MixinServerPlayerControlPermission {
         var input = packet.input();
         boolean blocked = false;
 
-        if (input.sprint() && !ControlManager.isPlayerControlEnabled(player, ControlType.SPRINT)) {
+        if (input.sprint() && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.SPRINT)) {
             player.setSprinting(false);
             blocked = true;
         }
 
-        if (input.shift() && !ControlManager.isPlayerControlEnabled(player, ControlType.SNEAK)) {
+        if (input.shift() && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.SNEAK)) {
             player.setShiftKeyDown(false);
             blocked = true;
         }
 
-        if (input.jump() && !ControlManager.isPlayerControlEnabled(player, ControlType.JUMP)) {
+        if (input.jump() && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.JUMP)) {
             blocked = true;
         }
 
-        if (player.isSwimming() && !ControlManager.isPlayerControlEnabled(player, ControlType.CRAWL)) {
+        if (player.isSwimming() && !ControlManager.INSTANCE.isPlayerControlEnabled(player, ControlType.CRAWL)) {
             player.setShiftKeyDown(false);
             blocked = true;
         }

@@ -15,13 +15,17 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class FieldVisualizationManager {
-    private static final Set<UUID> ENABLED = ConcurrentHashMap.newKeySet();
-    private static final ConcurrentHashMap<UUID, Integer> LAST_SYNC_TICK = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<UUID, Integer> PLAYER_RADIUS = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<UUID, HologramStyle> PLAYER_STYLE = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<UUID, DisplayMode> PLAYER_MODE = new ConcurrentHashMap<>();
-    private static volatile boolean installed;
-    private static final int SYNC_INTERVAL_TICKS = 5;
+
+    public static final FieldVisualizationManager INSTANCE = new FieldVisualizationManager();
+
+    
+    private final Set<UUID> ENABLED = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<UUID, Integer> LAST_SYNC_TICK = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Integer> PLAYER_RADIUS = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, HologramStyle> PLAYER_STYLE = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, DisplayMode> PLAYER_MODE = new ConcurrentHashMap<>();
+    private volatile boolean installed;
+    private final int SYNC_INTERVAL_TICKS = 5;
 
     public enum DisplayMode {
         EDGES_ONLY,
@@ -36,7 +40,7 @@ public final class FieldVisualizationManager {
             };
         }
 
-        public static DisplayMode parse(String raw) {
+        public DisplayMode parse(String raw) {
             String token = raw == null ? "" : raw.trim().toLowerCase().replace('_', '-');
             return switch (token) {
                 case "edges", "edges-only" -> EDGES_ONLY;
@@ -49,7 +53,7 @@ public final class FieldVisualizationManager {
 
     private FieldVisualizationManager() {}
 
-    public static void install() {
+    public void install() {
         if (installed) return;
         installed = true;
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -68,14 +72,14 @@ public final class FieldVisualizationManager {
         });
     }
 
-    public static void enable(UUID playerId) {
+    public void enable(UUID playerId) {
         ENABLED.add(playerId);
         PLAYER_RADIUS.putIfAbsent(playerId, 64);
         PLAYER_STYLE.putIfAbsent(playerId, HologramStyle.defaults());
         PLAYER_MODE.putIfAbsent(playerId, DisplayMode.EDGES_ONLY);
     }
 
-    public static void disable(UUID playerId) {
+    public void disable(UUID playerId) {
         ENABLED.remove(playerId);
         LAST_SYNC_TICK.remove(playerId);
         PLAYER_RADIUS.remove(playerId);
@@ -83,7 +87,7 @@ public final class FieldVisualizationManager {
         PLAYER_MODE.remove(playerId);
     }
 
-    public static void setMode(UUID playerId, DisplayMode mode) {
+    public void setMode(UUID playerId, DisplayMode mode) {
         PLAYER_MODE.put(playerId, mode);
         switch (mode) {
             case EDGES_ONLY -> PLAYER_STYLE.put(playerId, HologramStyle.defaults().withFeature(HologramFeature.AXES, false));
@@ -92,33 +96,33 @@ public final class FieldVisualizationManager {
         }
     }
 
-    public static DisplayMode getMode(UUID playerId) {
+    public DisplayMode getMode(UUID playerId) {
         return PLAYER_MODE.getOrDefault(playerId, DisplayMode.EDGES_ONLY);
     }
 
-    public static boolean isEnabled(UUID playerId) {
+    public boolean isEnabled(UUID playerId) {
         return ENABLED.contains(playerId);
     }
 
-    public static int getRadius(UUID playerId) {
+    public int getRadius(UUID playerId) {
         return PLAYER_RADIUS.getOrDefault(playerId, 64);
     }
 
-    public static void setRadius(UUID playerId, int radius) {
+    public void setRadius(UUID playerId, int radius) {
         PLAYER_RADIUS.put(playerId, radius);
     }
 
-    public static HologramStyle getStyle(UUID playerId) {
+    public HologramStyle getStyle(UUID playerId) {
         HologramStyle style = PLAYER_STYLE.get(playerId);
         return style == null ? HologramStyle.defaults() : style;
     }
 
-    public static void setFeature(UUID playerId, HologramFeature feature, boolean enabled) {
+    public void setFeature(UUID playerId, HologramFeature feature, boolean enabled) {
         HologramStyle current = getStyle(playerId);
         PLAYER_STYLE.put(playerId, current.withFeature(feature, enabled));
     }
 
-    private static void renderForPlayer(ServerLevel level, ServerPlayer player, int tick) {
+    private void renderForPlayer(ServerLevel level, ServerPlayer player, int tick) {
         Integer last = LAST_SYNC_TICK.getOrDefault(player.getUUID(), 0);
         if (tick - last < SYNC_INTERVAL_TICKS) return;
         LAST_SYNC_TICK.put(player.getUUID(), tick);
@@ -129,7 +133,7 @@ public final class FieldVisualizationManager {
         List<HologramDefinition> visible = new ArrayList<>();
 
         // 1. 同步區域 (Field) 資料
-        for (FieldDefinition field : FieldManager.all().values()) {
+        for (FieldDefinition field : FieldManager.INSTANCE.all().values()) {
             if (!field.dimensionId().equals(level.dimension().identifier())) continue;
             if (distanceToAabb(viewer, field.bounds()) > radius) continue;
 
@@ -143,7 +147,7 @@ public final class FieldVisualizationManager {
         }
 
         // 2. 同步獨立的全息投影資料
-        for (HologramDefinition holo : HologramManager.all().values()) {
+        for (HologramDefinition holo : HologramManager.INSTANCE.all().values()) {
             if (!holo.dimensionId().equals(level.dimension().identifier())) continue;
             if (distanceToAabb(viewer, holo.bounds()) > radius) continue;
             visible.add(holo);
@@ -152,7 +156,7 @@ public final class FieldVisualizationManager {
         HologramNetworking.syncToPlayer(player, visible);
     }
 
-    private static double distanceToAabb(Vec3 pos, AABB box) {
+    private double distanceToAabb(Vec3 pos, AABB box) {
         double dx = Math.max(Math.max(box.minX - pos.x, 0.0), pos.x - box.maxX);
         double dy = Math.max(Math.max(box.minY - pos.y, 0.0), pos.y - box.maxY);
         double dz = Math.max(Math.max(box.minZ - pos.z, 0.0), pos.z - box.maxZ);

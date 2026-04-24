@@ -27,8 +27,8 @@ public abstract class MixinLivingEntityControl {
         LivingEntity entity = (LivingEntity) (Object) this;
 
         // 如果這個生物正在被玩家遙控
-        if (ControlManager.isControlledByPlayer(entity)) {
-            ControlInputPayload input = ControlManager.getInput(entity);
+        if (ControlManager.INSTANCE.isControlledByPlayer(entity)) {
+            ControlInputPayload input = ControlManager.INSTANCE.getInput(entity);
 
             if (input != null) {
                 // 1. 🌟 強制同步視角 (讓生物的頭和身體看向玩家滑鼠指的方向)

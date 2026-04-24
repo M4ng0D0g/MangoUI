@@ -12,23 +12,27 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class PermissionManager {
 
+    public static final PermissionManager INSTANCE = new PermissionManager();
+
+    
+
     // 🌟 記憶體狀態分離：效能最大化
-    private static PermissionScope globalScope = new PermissionScope();
-    private static final Map<Identifier, PermissionScope> dimensionScopes = new ConcurrentHashMap<>();
-    private static final Map<Identifier, PermissionScope> fieldScopes = new ConcurrentHashMap<>();
-    private static final ShortIdRegistry DIMENSION_ID_REGISTRY = new ShortIdRegistry(6);
-    private static final ShortIdRegistry FIELD_ID_REGISTRY = new ShortIdRegistry(6);
+    private PermissionScope globalScope = new PermissionScope();
+    private final Map<Identifier, PermissionScope> dimensionScopes = new ConcurrentHashMap<>();
+    private final Map<Identifier, PermissionScope> fieldScopes = new ConcurrentHashMap<>();
+    private final ShortIdRegistry DIMENSION_ID_REGISTRY = new ShortIdRegistry(6);
+    private final ShortIdRegistry FIELD_ID_REGISTRY = new ShortIdRegistry(6);
 
     // 🌟 使用統一字串 Key 的儲存介面
-    private static DataStorage<String, PermissionScope> storage;
+    private DataStorage<String, PermissionScope> storage;
 
     private PermissionManager() {}
 
-    public static void install() {
+    public void install() {
         install(new NbtPermissionStorage());
     }
 
-    public static void install(DataStorage<String, PermissionScope> storageProvider) {
+    public void install(DataStorage<String, PermissionScope> storageProvider) {
         storage = storageProvider;
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -64,41 +68,41 @@ public final class PermissionManager {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> clear());
     }
 
-    public static PermissionScope global() { return globalScope; }
+    public PermissionScope global() { return globalScope; }
 
-    public static PermissionScope dimension(Identifier dimensionId) {
+    public PermissionScope dimension(Identifier dimensionId) {
         return dimensionScopes.computeIfAbsent(dimensionId, k -> {
             DIMENSION_ID_REGISTRY.generateAndBind(k);
             return new PermissionScope();
         });
     }
 
-    public static PermissionScope field(Identifier fieldId) {
+    public PermissionScope field(Identifier fieldId) {
         return fieldScopes.computeIfAbsent(fieldId, k -> {
             FIELD_ID_REGISTRY.generateAndBind(k);
             return new PermissionScope();
         });
     }
 
-    public static Identifier resolveDimensionShortId(String shortId) {
+    public Identifier resolveDimensionShortId(String shortId) {
         return DIMENSION_ID_REGISTRY.getFullId(shortId);
     }
 
-    public static String getDimensionShortIdOf(Identifier fullId) {
+    public String getDimensionShortIdOf(Identifier fullId) {
         return DIMENSION_ID_REGISTRY.getShortId(fullId);
     }
 
-    public static Identifier resolveFieldShortId(String shortId) {
+    public Identifier resolveFieldShortId(String shortId) {
         return FIELD_ID_REGISTRY.getFullId(shortId);
     }
 
-    public static String getFieldShortIdOf(Identifier fullId) {
+    public String getFieldShortIdOf(Identifier fullId) {
         return FIELD_ID_REGISTRY.getShortId(fullId);
     }
 
     // ... (保留 getScopeMergedTable 與 getFinalPermissions 不變) ...
 
-    public static PermissionDecision evaluate(UUID playerId, List<String> playerGroups, PermissionAction action, Identifier fieldId, Identifier dimensionId) {
+    public PermissionDecision evaluate(UUID playerId, List<String> playerGroups, PermissionAction action, Identifier fieldId, Identifier dimensionId) {
         PermissionDecision decision;
 
         if (fieldId != null && fieldScopes.containsKey(fieldId)) {
@@ -117,7 +121,7 @@ public final class PermissionManager {
         return PermissionDecision.ALLOW;
     }
 
-    public static void save() {
+    public void save() {
         if (storage != null) {
             storage.save("global", globalScope);
             dimensionScopes.forEach((k, v) -> storage.save("dim:" + k.toString(), v));
@@ -125,7 +129,7 @@ public final class PermissionManager {
         }
     }
 
-    public static void clear() {
+    public void clear() {
         globalScope = new PermissionScope();
         dimensionScopes.clear();
         fieldScopes.clear();
@@ -133,15 +137,15 @@ public final class PermissionManager {
         FIELD_ID_REGISTRY.clear();
     }
 
-    public static PermissionScope dimensionIfPresent(Identifier dimensionId) {
+    public PermissionScope dimensionIfPresent(Identifier dimensionId) {
         return dimensionScopes.get(dimensionId);
     }
 
-    public static PermissionScope fieldIfPresent(Identifier fieldId) {
+    public PermissionScope fieldIfPresent(Identifier fieldId) {
         return fieldScopes.get(fieldId);
     }
 
-    public static PermissionDecision resolveGroupInScope(String groupName, PermissionAction action, ScopeLayer scopeLayer, Identifier scopeId) {
+    public PermissionDecision resolveGroupInScope(String groupName, PermissionAction action, ScopeLayer scopeLayer, Identifier scopeId) {
         String normalizedGroup = normalizeGroupName(groupName);
         return switch (scopeLayer) {
             case GLOBAL -> globalScope.forGroup(normalizedGroup).get(action);
@@ -157,7 +161,7 @@ public final class PermissionManager {
         };
     }
 
-    public static PermissionDecision resolveGroupMerged(String groupName, PermissionAction action, Identifier fieldId, Identifier dimensionId) {
+    public PermissionDecision resolveGroupMerged(String groupName, PermissionAction action, Identifier fieldId, Identifier dimensionId) {
         String normalizedGroup = normalizeGroupName(groupName);
 
         if (fieldId != null) {
@@ -188,15 +192,15 @@ public final class PermissionManager {
         return PermissionDecision.UNSET;
     }
 
-    public static Set<Identifier> dimensionScopeIds() {
+    public Set<Identifier> dimensionScopeIds() {
         return Set.copyOf(dimensionScopes.keySet());
     }
 
-    public static Set<Identifier> fieldScopeIds() {
+    public Set<Identifier> fieldScopeIds() {
         return Set.copyOf(fieldScopes.keySet());
     }
 
-    public static Set<String> knownGroupNames() {
+    public Set<String> knownGroupNames() {
         Set<String> names = new LinkedHashSet<>();
         names.addAll(globalScope.groupTablesSnapshot().keySet());
         for (PermissionScope scope : dimensionScopes.values()) {
@@ -209,7 +213,7 @@ public final class PermissionManager {
         return Set.copyOf(names);
     }
 
-    public static String normalizeGroupName(String groupName) {
+    public String normalizeGroupName(String groupName) {
         if (groupName == null || groupName.isBlank()) {
             return "everyone";
         }
