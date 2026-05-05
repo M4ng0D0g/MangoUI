@@ -8,6 +8,7 @@ import com.myudog.myulib.api.team.TeamColor;
 import com.myudog.myulib.api.team.TeamDefinition;
 import com.myudog.myulib.api.team.TeamManager;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,16 +18,16 @@ import java.util.UUID;
 
 public abstract class GameDefinition<C extends GameConfig, D extends GameData, S extends IState<IGameContext>> {
 
-    private final UUID uuid;
+    private final Identifier defId;
     private final BehaviorChain behaviorChain;
 
-    protected GameDefinition(@NotNull UUID uuid) {
-        this.uuid = uuid;
+    protected GameDefinition(@NotNull Identifier defId) {
+        this.defId = defId;
         behaviorChain = new BehaviorChain();
     }
 
-    public final UUID uuid() {
-        return uuid;
+    public final Identifier id() {
+        return defId;
     }
 
 
