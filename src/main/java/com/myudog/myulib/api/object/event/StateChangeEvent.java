@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.object.event;
 
-import com.myudog.myulib.api.core.event.IEvent;
+import com.myudog.myulib.api.event.IEvent;
 import com.myudog.myulib.api.game.core.GameInstance;
 
 /**
@@ -10,7 +10,7 @@ import com.myudog.myulib.api.game.core.GameInstance;
  *
  * @param <S> 狀態列舉的型別 (例如 FightChessState)
  */
-public record StateChangeEvent<S extends com.myudog.myulib.api.core.state.IState<com.myudog.myulib.api.game.core.IGameContext>>(
+public record StateChangeEvent<S extends com.myudog.myulib.api.state.IState<com.myudog.myulib.api.game.core.IGameContext>>(
         GameInstance<?, ?, S> instance,
         S from,
         S to

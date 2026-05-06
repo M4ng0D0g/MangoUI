@@ -4,21 +4,31 @@ import com.myudog.myulib.api.game.features.*;
 
 public abstract class GameData {
 
-    public final EcsFeature ECS_FEATURE;
-    public final FieldFeature FIELD_FEATURE;
-    public final ObjectFeature OBJECT_FEATURE;
-    public final TeamFeature TEAM_FEATURE;
+    public EcsFeature ECS_FEATURE;
+    public FieldFeature FIELD_FEATURE;
+    public ObjectFeature OBJECT_FEATURE;
+    public TeamFeature TEAM_FEATURE;
 
-    protected GameData(
-            EcsFeature ecsFeature,
-            FieldFeature fieldFeature,
-            ObjectFeature objectFeature,
-            TeamFeature teamFeature
-    ) {
+    protected GameData() {}
+
+    public GameData withEcs(EcsFeature ecsFeature) {
         this.ECS_FEATURE = ecsFeature;
+        return this;
+    }
+
+    public GameData withField( FieldFeature fieldFeature) {
         this.FIELD_FEATURE = fieldFeature;
+        return this;
+    }
+
+    public GameData withObject(ObjectFeature objectFeature) {
         this.OBJECT_FEATURE = objectFeature;
+        return this;
+    }
+
+    public GameData withTeam(TeamFeature teamFeature) {
         this.TEAM_FEATURE = teamFeature;
+        return this;
     }
 
     public void clean(GameInstance<?, ?, ?> instance) {

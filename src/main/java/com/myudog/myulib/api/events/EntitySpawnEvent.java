@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.events;
 
-import com.myudog.myulib.api.core.event.IFailableEvent;
+import com.myudog.myulib.api.event.IFailableEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 

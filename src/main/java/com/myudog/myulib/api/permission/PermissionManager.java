@@ -3,7 +3,7 @@ package com.myudog.myulib.api.permission;
 import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.util.ShortIdRegistry;
 import com.myudog.myulib.api.permission.storage.NbtPermissionStorage;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 

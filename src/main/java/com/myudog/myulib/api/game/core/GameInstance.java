@@ -1,8 +1,8 @@
 package com.myudog.myulib.api.game.core;
 
-import com.myudog.myulib.api.core.event.EventBus;
-import com.myudog.myulib.api.core.state.IState;
-import com.myudog.myulib.api.core.state.StateMachine;
+import com.myudog.myulib.api.event.EventBus;
+import com.myudog.myulib.api.state.IState;
+import com.myudog.myulib.api.state.StateMachine;
 import com.myudog.myulib.api.effect.SpatialEffectManager;
 import com.myudog.myulib.api.object.event.StateChangeEvent;
 import com.myudog.myulib.api.team.TeamManager;

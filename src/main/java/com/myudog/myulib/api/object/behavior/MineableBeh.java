@@ -1,7 +1,7 @@
 package com.myudog.myulib.api.object.behavior;
 
-import com.myudog.myulib.api.core.event.IEventListener;
-import com.myudog.myulib.api.core.event.ProcessResult;
+import com.myudog.myulib.api.event.IEventListener;
+import com.myudog.myulib.api.event.ProcessResult;
 import com.myudog.myulib.api.game.core.GameInstance;
 import com.myudog.myulib.api.object.event.BlockBreakEvent;
 import com.myudog.myulib.api.object.event.ObjectMineEvent;

@@ -2,7 +2,7 @@ package com.myudog.myulib.api.field.storage;
 
 import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.field.FieldDefinition;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import com.myudog.myulib.api.util.NbtIoHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;

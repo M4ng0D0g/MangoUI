@@ -11,13 +11,13 @@ Use this page when you need the class-level contract, then follow the field and 
 - Methods are listed in the existing API content below.
 Event API
 Public event-layer Java types:
-- `com.myudog.myulib.api.core.event.IEvent`
-- `com.myudog.myulib.api.core.event.IFailableEvent`
-- `com.myudog.myulib.api.core.event.EventPriority`
-- `com.myudog.myulib.api.core.event.ProcessResult`
-- `com.myudog.myulib.api.core.event.IEventListener`
-- `com.myudog.myulib.api.core.event.EventBus`
-- `com.myudog.myulib.api.core.event.ServerEventBus`
+- `com.myudog.myulib.api.event.IEvent`
+- `com.myudog.myulib.api.event.IFailableEvent`
+- `com.myudog.myulib.api.event.EventPriority`
+- `com.myudog.myulib.api.event.ProcessResult`
+- `com.myudog.myulib.api.event.IEventListener`
+- `com.myudog.myulib.api.event.EventBus`
+- `com.myudog.myulib.api.event.ServerEventBus`
 - `com.myudog.myulib.api.events.EntitySpawnEvent`
 - `com.myudog.myulib.api.events.ServerTickEvent`
 - `com.myudog.myulib.api.events.ComponentAddedEvent`

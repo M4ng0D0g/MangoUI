@@ -1,7 +1,7 @@
 package com.myudog.myulib.api.events;
 
-import com.myudog.myulib.api.core.ecs.IComponent;
-import com.myudog.myulib.api.core.event.IEvent;
+import com.myudog.myulib.api.ecs.IComponent;
+import com.myudog.myulib.api.event.IEvent;
 
 public class ComponentAddedEvent implements IEvent {
     private final int entityId;

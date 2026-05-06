@@ -11,7 +11,7 @@ A thin compatibility API also exists in `com.myudog.myulib.api.game.logic` for b
 - `com.myudog.myulib.api.timer.TimerManager`
 - `com.myudog.myulib.api.timer.TimerModels`
 - `com.myudog.myulib.api.timer.TimerEvents`
-- `com.myudog.myulib.api.core.event.ServerEventBus`
+- `com.myudog.myulib.api.event.ServerEventBus`
 - `com.myudog.myulib.api.permission.PermissionManager`
 ## Notes
 - Keep this area as legacy navigation only.

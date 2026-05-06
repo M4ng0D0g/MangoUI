@@ -6,7 +6,7 @@ import com.myudog.myulib.api.floating.IFloatingObject;
 import com.myudog.myulib.api.shape.IShape;
 import com.myudog.myulib.internal.monitor.VFXMonitor;
 import com.myudog.myulib.internal.scheduler.EffectTicker;
-import com.myudog.myulib.internal.core.state.ParticleState;
+import com.myudog.myulib.internal.state.ParticleState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;import org.joml.Vector3f;
 import java.util.ArrayList;

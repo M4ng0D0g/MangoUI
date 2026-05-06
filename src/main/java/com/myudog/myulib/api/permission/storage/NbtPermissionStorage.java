@@ -5,7 +5,7 @@ import com.myudog.myulib.api.permission.PermissionAction;
 import com.myudog.myulib.api.permission.PermissionDecision;
 import com.myudog.myulib.api.permission.PermissionScope;
 import com.myudog.myulib.api.permission.PermissionTable;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import com.myudog.myulib.api.util.NbtIoHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;

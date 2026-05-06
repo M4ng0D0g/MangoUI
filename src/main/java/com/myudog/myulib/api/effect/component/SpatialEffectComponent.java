@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.effect.component;
 
-import com.myudog.myulib.api.core.ecs.IComponent;
+import com.myudog.myulib.api.ecs.IComponent;
 import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import java.util.HashMap;

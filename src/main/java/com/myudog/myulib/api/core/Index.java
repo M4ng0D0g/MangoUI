@@ -2,6 +2,7 @@ package com.myudog.myulib.api.core;
 
 import java.util.Arrays;
 
+@Deprecated
 public class Index {
 
     private int[] shape;

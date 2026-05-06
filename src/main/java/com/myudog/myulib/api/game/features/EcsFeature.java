@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.game.features;
 
-import com.myudog.myulib.api.core.ecs.EcsContainer;
+import com.myudog.myulib.api.ecs.EcsContainer;
 import com.myudog.myulib.api.game.core.GameInstance;
 import org.jetbrains.annotations.NotNull;
 

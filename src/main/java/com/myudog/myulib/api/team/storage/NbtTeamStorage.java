@@ -1,7 +1,7 @@
 package com.myudog.myulib.api.team.storage;
 
 import com.myudog.myulib.Myulib;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import com.myudog.myulib.api.team.TeamDefinition;
 import com.myudog.myulib.api.team.TeamColor;
 import com.myudog.myulib.api.team.TeamFlag;
@@ -9,7 +9,6 @@ import com.myudog.myulib.api.util.NbtIoHelper;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 
 import java.lang.reflect.Method;

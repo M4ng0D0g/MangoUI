@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.object.event;
 
-import com.myudog.myulib.api.core.event.IEvent;
+import com.myudog.myulib.api.event.IEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;

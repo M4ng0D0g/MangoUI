@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.game.core;
 
-import com.myudog.myulib.api.core.state.IState;
+import com.myudog.myulib.api.state.IState;
 import com.myudog.myulib.api.debug.DebugFeature;
 import com.myudog.myulib.api.debug.DebugLogManager;
 import com.myudog.myulib.api.effect.ISpatialEffectManager;

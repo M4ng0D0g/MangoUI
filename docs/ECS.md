@@ -23,7 +23,7 @@ Canonical ECS docs:
 ```java
 world.eventBus.subscribe(ComponentAddedEvent.class, event -> {
     System.out.println("component added: " + event.getEntityId());
-    return com.myudog.myulib.api.core.event.ProcessResult.PASS;
+    return com.myudog.myulib.api.event.ProcessResult.PASS;
 });
 ```
 ## 生命週期

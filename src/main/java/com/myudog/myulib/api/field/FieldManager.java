@@ -3,7 +3,7 @@ package com.myudog.myulib.api.field;
 import com.myudog.myulib.api.field.storage.NbtFieldStorage;
 import com.myudog.myulib.api.debug.DebugFeature;
 import com.myudog.myulib.api.debug.DebugLogManager;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;

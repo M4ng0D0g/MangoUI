@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.team.storage;
 
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import com.myudog.myulib.api.team.TeamDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;

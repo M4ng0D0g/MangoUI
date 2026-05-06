@@ -28,7 +28,7 @@ public abstract class GameConfig {
     public final UUID SPECTATOR_TEAM = UUID.randomUUID();
     public final Identifier GAME_DEF_ID;
 
-    GameConfig(Identifier gameDefId) {
+    public GameConfig(Identifier gameDefId) {
         this.GAME_DEF_ID = gameDefId;
     }
 

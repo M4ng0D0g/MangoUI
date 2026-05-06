@@ -1,9 +1,9 @@
 package com.myudog.myulib.api.game.core;
 
 import com.myudog.myulib.api.core.BehaviorChain;
-import com.myudog.myulib.api.core.event.EventBus;
-import com.myudog.myulib.api.core.state.IState;
-import com.myudog.myulib.api.core.state.StateMachine;
+import com.myudog.myulib.api.event.EventBus;
+import com.myudog.myulib.api.state.IState;
+import com.myudog.myulib.api.state.StateMachine;
 import com.myudog.myulib.api.team.TeamColor;
 import com.myudog.myulib.api.team.TeamDefinition;
 import com.myudog.myulib.api.team.TeamManager;
@@ -14,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 
 public abstract class GameDefinition<C extends GameConfig, D extends GameData, S extends IState<IGameContext>> {
 

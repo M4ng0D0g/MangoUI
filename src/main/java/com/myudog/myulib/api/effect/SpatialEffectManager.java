@@ -1,7 +1,7 @@
 package com.myudog.myulib.api.effect;
 
 import com.myudog.myulib.api.effect.component.SpatialEffectComponent;
-import com.myudog.myulib.api.core.ecs.EcsContainer;
+import com.myudog.myulib.api.ecs.EcsContainer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;

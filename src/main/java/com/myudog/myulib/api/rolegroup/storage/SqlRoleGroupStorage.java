@@ -1,7 +1,7 @@
 package com.myudog.myulib.api.rolegroup.storage;
 
 import com.myudog.myulib.api.rolegroup.RoleGroupDefinition;
-import com.myudog.myulib.api.core.storage.DataStorage;
+import com.myudog.myulib.api.storage.DataStorage;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 

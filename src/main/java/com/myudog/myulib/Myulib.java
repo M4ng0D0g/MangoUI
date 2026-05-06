@@ -20,11 +20,6 @@ public final class Myulib implements ModInitializer {
         return Identifier.fromNamespaceAndPath(MOD_ID, path.trim().toLowerCase());
     }
 
-    public static final int TPS = 20;
-    public static final int TPM = 1200;
-
-
-
     @Override
     public void onInitialize() {
         LOGGER.info("MyuLib is initializing...");
