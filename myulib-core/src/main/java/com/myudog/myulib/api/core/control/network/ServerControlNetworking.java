@@ -2,13 +2,17 @@ package com.myudog.myulib.api.core.control.network;
 
 import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.core.control.ControlManager;
+import com.myudog.myulib.api.core.control.Intent;
+import com.myudog.myulib.api.core.control.IPlayerController;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import org.jspecify.annotations.NonNull;
 
 public final class ServerControlNetworking {
     public static final Identifier CONTROL_STATE_CHANNEL = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "control_state");
@@ -25,7 +29,7 @@ public final class ServerControlNetworking {
                 StreamCodec.of(ControlStatePayload::encode, ControlStatePayload::decode);
 
         @Override
-        public Type<? extends CustomPacketPayload> type() {
+        public @NonNull Type<? extends CustomPacketPayload> type() {
             return TYPE;
         }
 
@@ -47,6 +51,7 @@ public final class ServerControlNetworking {
         payloadsRegistered = true;
 
         PayloadTypeRegistry.serverboundPlay().register(ControlInputPayload.TYPE, ControlInputPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(ControlIntentPayload.TYPE, ControlIntentPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(ControlStatePayload.TYPE, ControlStatePayload.CODEC);
     }
 
@@ -56,8 +61,22 @@ public final class ServerControlNetworking {
         }
         receiversRegistered = true;
 
+        // 修正 1：傳遞 ServerLevel 給 updateInput
         ServerPlayNetworking.registerGlobalReceiver(ControlInputPayload.TYPE,
-                (payload, context) -> context.server().execute(() -> ControlManager.INSTANCE.updateInput(context.player(), payload)));
+                (payload, context) -> context.server().execute(() -> {
+                    if (context.player().level() instanceof ServerLevel serverLevel) {
+                        ControlManager.INSTANCE.updateInput(context.player(), serverLevel, payload);
+                    }
+                }));
+
+        // 修正 2：使用新的 Intent 建構子與 dispatch 邏輯
+        ServerPlayNetworking.registerGlobalReceiver(ControlIntentPayload.TYPE,
+                (payload, context) -> context.server().execute(() -> {
+                    if (context.player() instanceof IPlayerController controller) {
+                        Intent intent = new Intent(payload.intentType(), payload.vector(), payload.keyCode(), payload.customAction());
+                        controller.myulib_mc$dispatchIntent(intent);
+                    }
+                }));
     }
 
     public static void syncControlState(ServerPlayer player, int disabledMask, boolean controlling, boolean controlled) {

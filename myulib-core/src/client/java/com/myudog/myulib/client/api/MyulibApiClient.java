@@ -7,7 +7,8 @@ import com.myudog.myulib.client.api.hologram.network.HologramClientNetworking;
 public final class MyulibApiClient {
     public static void initCoreClient() {
         CameraApi.initClient();
-        ControlManager.INSTANCE.installClient();
+        com.myudog.myulib.client.api.camera.ClientCameraLifecycle.init();
+        ControlManager.INSTANCE.install();
         HologramClientNetworking.registerClientReceivers();
     }
 }

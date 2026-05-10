@@ -16,6 +16,7 @@ public final class MyulibCore implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("MyuLib Core is initializing...");
+        com.myudog.myulib.internal.control.ControlLifecycleListener.register();
         LOGGER.info("MyuLib Core initialized.");
     }
 }

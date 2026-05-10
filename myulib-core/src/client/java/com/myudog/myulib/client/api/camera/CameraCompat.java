@@ -2,69 +2,42 @@ package com.myudog.myulib.client.api.camera;
 
 import net.minecraft.client.Camera;
 import net.minecraft.world.phys.Vec3;
+import com.myudog.myulib.client.mixin.client.camera.CameraAccessor;
 
-import java.lang.reflect.Method;
-
-final class CameraCompat {
-    private CameraCompat() {
-    }
-
-    static Vec3 getPosition(Camera camera) {
-        try {
-            Method m = Camera.class.getMethod("getPosition");
-            Object value = m.invoke(camera);
-            if (value instanceof Vec3 vec3) {
-                return vec3;
-            }
-        } catch (ReflectiveOperationException ignored) {
+/**
+ * 處理不同映射下的相機存取相容性。
+ */
+public final class CameraCompat {
+    public static Vec3 getPosition(Camera camera) {
+        if (camera instanceof CameraAccessor accessor) {
+            return accessor.getPosition();
         }
         return Vec3.ZERO;
     }
 
-    static float getYaw(Camera camera) {
-        try {
-            Method m = Camera.class.getMethod("getYRot");
-            Object value = m.invoke(camera);
-            if (value instanceof Float f) {
-                return f;
-            }
-        } catch (ReflectiveOperationException ignored) {
+    public static float getYaw(Camera camera) {
+        if (camera instanceof CameraAccessor accessor) {
+            return accessor.getYaw();
         }
-        return 0.0f;
+        return 0;
     }
 
-    static float getPitch(Camera camera) {
-        try {
-            Method m = Camera.class.getMethod("getXRot");
-            Object value = m.invoke(camera);
-            if (value instanceof Float f) {
-                return f;
-            }
-        } catch (ReflectiveOperationException ignored) {
+    public static float getPitch(Camera camera) {
+        if (camera instanceof CameraAccessor accessor) {
+            return accessor.getPitch();
         }
-        return 0.0f;
+        return 0;
     }
 
-    static void setPosition(Camera camera, Vec3 pos) {
-        try {
-            Method vecMethod = Camera.class.getMethod("setPosition", Vec3.class);
-            vecMethod.invoke(camera, pos);
-            return;
-        } catch (ReflectiveOperationException ignored) {
-        }
-        try {
-            Method xyzMethod = Camera.class.getMethod("setPosition", double.class, double.class, double.class);
-            xyzMethod.invoke(camera, pos.x, pos.y, pos.z);
-        } catch (ReflectiveOperationException ignored) {
+    public static void setPosition(Camera camera, Vec3 pos) {
+        if (camera instanceof CameraAccessor accessor) {
+            accessor.setPosition(pos);
         }
     }
 
-    static void setRotation(Camera camera, float yaw, float pitch) {
-        try {
-            Method m = Camera.class.getMethod("setRotation", float.class, float.class);
-            m.invoke(camera, yaw, pitch);
-        } catch (ReflectiveOperationException ignored) {
+    public static void setRotation(Camera camera, float yaw, float pitch) {
+        if (camera instanceof CameraAccessor accessor) {
+            accessor.invokeSetRotation(yaw, pitch);
         }
     }
 }
-

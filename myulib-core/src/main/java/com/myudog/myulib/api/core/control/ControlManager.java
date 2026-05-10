@@ -5,37 +5,24 @@ import com.myudog.myulib.api.core.control.network.ServerControlNetworking;
 import com.myudog.myulib.api.core.debug.DebugFeature;
 import com.myudog.myulib.api.core.debug.DebugLogManager;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-/**
- * 實體操控權管理器 (Possession System)
- * 負責處理玩家對其他實體的 1 對 1 控制權綁定與輸入轉發。
- */
 public final class ControlManager {
 
     public static final ControlManager INSTANCE = new ControlManager();
 
-    
-
-    // 控制者玩家 UUID -> 目標實體 UUID
-    private final Map<UUID, UUID> CONTROLLER_TO_TARGET = new ConcurrentHashMap<>();
-    // 目標實體 UUID -> 控制者玩家 UUID
-    private final Map<UUID, UUID> TARGET_TO_CONTROLLER = new ConcurrentHashMap<>();
-    // 實體 UUID -> 最新的按鍵指令
+    private final Map<UUID, Set<UUID>> CONTROLLER_TO_TARGETS = new ConcurrentHashMap<>();
+    private final Map<UUID, Set<UUID>> TARGET_TO_CONTROLLERS = new ConcurrentHashMap<>();
     private final Map<UUID, ControlInputPayload> ENTITY_INPUTS = new ConcurrentHashMap<>();
-    // 玩家 UUID -> 被停用的控制項
-    private final Map<UUID, Set<ControlType>> PLAYER_DISABLED_CONTROLS = new ConcurrentHashMap<>();
+    private final Map<UUID, Integer> PLAYER_PERMISSIONS = new ConcurrentHashMap<>();
 
     private ControlManager() {}
 
@@ -44,315 +31,184 @@ public final class ControlManager {
         ServerControlNetworking.registerServerReceivers();
     }
 
-    public void installClient() {
+    // --- 權限管理 (Permissions) ---
+
+    public boolean isPlayerControlEnabled(ServerPlayer player, ControlType type) {
+        if (player == null) return true;
+        return isPlayerControlEnabled(player.getUUID(), type);
     }
 
+    public boolean isPlayerControlEnabled(UUID playerId, ControlType type) {
+        if (playerId == null) return true;
+        int mask = PLAYER_PERMISSIONS.getOrDefault(playerId, 0);
+        return (mask & (1 << type.ordinal())) == 0;
+    }
+
+    public void setPlayerControl(ServerPlayer player, ControlType type, boolean enabled) {
+        if (player == null) return;
+        UUID uuid = player.getUUID();
+        int mask = PLAYER_PERMISSIONS.getOrDefault(uuid, 0);
+        if (enabled) mask &= ~(1 << type.ordinal());
+        else mask |= (1 << type.ordinal());
+        PLAYER_PERMISSIONS.put(uuid, mask);
+        syncControlState(player);
+    }
+
+    // --- 控制綁定 (Binding) ---
+
     public boolean bind(ServerPlayer player, Entity target) {
-        if (player == null || target == null) {
-            return false;
-        }
-        Set<UUID> syncTargets = new HashSet<>();
-        boolean changed = bindInternal(player.getUUID(), target.getUUID(), syncTargets);
-        if (!changed) {
-            return false;
-        }
-
-        if (target instanceof Mob mob) {
-            mob.addTag("myulib_controlled");
-        }
-
-        DebugLogManager.INSTANCE.log(DebugFeature.CONTROL,
-                "bind player=" + player.getName().getString() + "(" + player.getUUID() + ") -> entity=" + target.getType() + "(" + target.getUUID() + ")");
-        syncPlayers(player.level().getServer(), syncTargets);
+        if (player == null || target == null || player.getUUID().equals(target.getUUID())) return false;
+        CONTROLLER_TO_TARGETS.computeIfAbsent(player.getUUID(), k -> ConcurrentHashMap.newKeySet()).add(target.getUUID());
+        TARGET_TO_CONTROLLERS.computeIfAbsent(target.getUUID(), k -> ConcurrentHashMap.newKeySet()).add(player.getUUID());
+        if (target instanceof Mob mob) mob.addTag("myulib_controlled");
+        syncControlState(player);
         return true;
     }
 
     public void unbind(ServerPlayer player) {
-        if (player == null) {
-            return;
+        if (player == null) return;
+        if (player.level() instanceof ServerLevel serverLevel) {
+            unbindFrom(player.getUUID(), serverLevel.getServer());
         }
-        Set<UUID> syncTargets = new HashSet<>();
-        unbindControllerInternal(player.getUUID(), syncTargets);
-        syncPlayers(player.level().getServer(), syncTargets);
-    }
-
-    public boolean bind(UUID controllerId, UUID targetId) {
-        if (controllerId == null || targetId == null) {
-            return false;
-        }
-        return bindInternal(controllerId, targetId, new HashSet<>());
-    }
-
-    public void unbindFrom(UUID controllerId) {
-        if (controllerId == null) {
-            return;
-        }
-        unbindControllerInternal(controllerId, new HashSet<>());
-    }
-
-    public void unbindTo(UUID targetId) {
-        if (targetId == null) {
-            return;
-        }
-        unbindTargetInternal(targetId, new HashSet<>());
     }
 
     public void unbindTo(Entity target) {
-        if (target == null) {
-            return;
+        if (target == null) return;
+        if (target.level() instanceof ServerLevel serverLevel) {
+            unbindTarget(target.getUUID(), serverLevel.getServer());
         }
-        Set<UUID> syncTargets = new HashSet<>();
-        unbindTargetInternal(target.getUUID(), syncTargets);
-        syncPlayers(target.level().getServer(), syncTargets);
     }
 
-    public boolean isControlling(ServerPlayer player) {
-        return player != null && CONTROLLER_TO_TARGET.containsKey(player.getUUID());
+    public boolean unbind(ServerPlayer player, UUID targetUuid) {
+        if (player == null || targetUuid == null) return false;
+        UUID pUuid = player.getUUID();
+        Set<UUID> targets = CONTROLLER_TO_TARGETS.get(pUuid);
+        if (targets != null && targets.remove(targetUuid)) {
+            if (targets.isEmpty()) CONTROLLER_TO_TARGETS.remove(pUuid);
+            Set<UUID> controllers = TARGET_TO_CONTROLLERS.get(targetUuid);
+            if (controllers != null) {
+                controllers.remove(pUuid);
+                if (controllers.isEmpty()) {
+                    TARGET_TO_CONTROLLERS.remove(targetUuid);
+                    ENTITY_INPUTS.remove(targetUuid);
+                }
+            }
+            syncControlState(player);
+            return true;
+        }
+        return false;
     }
 
-    public boolean isController(UUID uuid) {
-        return uuid != null && CONTROLLER_TO_TARGET.containsKey(uuid);
+    public void unbindFrom(UUID controllerId, MinecraftServer server) {
+        Set<UUID> targets = CONTROLLER_TO_TARGETS.remove(controllerId);
+        if (targets != null) {
+            for (UUID tUuid : targets) {
+                Set<UUID> controllers = TARGET_TO_CONTROLLERS.get(tUuid);
+                if (controllers != null) {
+                    controllers.remove(controllerId);
+                    if (controllers.isEmpty()) {
+                        TARGET_TO_CONTROLLERS.remove(tUuid);
+                        ENTITY_INPUTS.remove(tUuid);
+                    }
+                }
+            }
+        }
+        syncPlayerByUuid(server, controllerId);
     }
 
-    public UUID getControlledEntity(ServerPlayer player) {
-        return player == null ? null : CONTROLLER_TO_TARGET.get(player.getUUID());
+    public void unbindTarget(UUID targetId, MinecraftServer server) {
+        Set<UUID> controllers = TARGET_TO_CONTROLLERS.remove(targetId);
+        ENTITY_INPUTS.remove(targetId);
+        if (controllers != null) {
+            for (UUID pUuid : controllers) {
+                Set<UUID> targets = CONTROLLER_TO_TARGETS.get(pUuid);
+                if (targets != null) {
+                    targets.remove(targetId);
+                    if (targets.isEmpty()) CONTROLLER_TO_TARGETS.remove(pUuid);
+                }
+                syncPlayerByUuid(server, pUuid);
+            }
+        }
     }
 
-    public Optional<UUID> targetOfController(UUID controllerId) {
-        return Optional.ofNullable(controllerId == null ? null : CONTROLLER_TO_TARGET.get(controllerId));
+    // --- 輸入與意圖 (Input & Intent) ---
+
+    public void updateInput(ServerPlayer player, ServerLevel level, ControlInputPayload input) {
+        if (player == null || input == null) return;
+        Set<UUID> targets = CONTROLLER_TO_TARGETS.get(player.getUUID());
+        if (targets != null) {
+            for (UUID tUuid : targets) ENTITY_INPUTS.put(tUuid, input);
+        }
+    }
+
+    public void dispatchIntent(ServerPlayer player, ServerLevel level, Intent intent) {
+        if (player == null || intent == null) return;
+        Set<UUID> targets = CONTROLLER_TO_TARGETS.get(player.getUUID());
+        if (targets == null || targets.isEmpty()) return;
+
+        for (UUID targetId : targets) {
+            Entity targetEntity = level.getEntity(targetId);
+            if (targetEntity == null) continue;
+
+            switch (intent.type()) {
+                case MOVE_VECTOR -> { if (targetEntity instanceof IControllableMovable m) m.myulib_mc$executeMove(intent.vector()); }
+                case ROTATE -> { if (targetEntity instanceof IControllableRotatable r) r.updateRotation((float)intent.vector().x, (float)intent.vector().y); }
+                case JUMP, SNEAK, SPRINT -> { if (targetEntity instanceof IControllableActionable a) a.executeAction(intent); }
+                case LEFT_CLICK, RIGHT_CLICK -> { if (targetEntity instanceof IControllableInteractable i) i.executeInteract(intent); }
+                case GENERIC_ACTION -> { if (targetEntity instanceof IControllableCustom c) c.executeCustom(intent); }
+            }
+        }
+    }
+
+    // --- 查詢 (Queries) ---
+
+    public Set<UUID> getControlledEntities(UUID playerId) {
+        return CONTROLLER_TO_TARGETS.getOrDefault(playerId, Collections.emptySet());
+    }
+
+    public Set<UUID> getControllers(UUID targetId) {
+        return TARGET_TO_CONTROLLERS.getOrDefault(targetId, Collections.emptySet());
+    }
+
+    public Optional<UUID> targetOfController(UUID playerId) {
+        Set<UUID> targets = CONTROLLER_TO_TARGETS.get(playerId);
+        return targets == null || targets.isEmpty() ? Optional.empty() : Optional.of(targets.iterator().next());
     }
 
     public Optional<UUID> controllerOfTarget(UUID targetId) {
-        return Optional.ofNullable(targetId == null ? null : TARGET_TO_CONTROLLER.get(targetId));
+        Set<UUID> controllers = TARGET_TO_CONTROLLERS.get(targetId);
+        return controllers == null || controllers.isEmpty() ? Optional.empty() : Optional.of(controllers.iterator().next());
     }
 
-    public boolean isControlledTarget(UUID entityId) {
-        return entityId != null && TARGET_TO_CONTROLLER.containsKey(entityId);
-    }
-
-    public boolean isControlledByPlayer(Entity entity) {
-        return entity != null && TARGET_TO_CONTROLLER.containsKey(entity.getUUID());
-    }
-
-    /**
-     * 伺服器收到封包時呼叫：更新目標實體的輸入狀態
-     */
-    public void updateInput(ServerPlayer player, ControlInputPayload input) {
-        if (player == null || input == null) {
-            return;
-        }
-
-        UUID targetId = CONTROLLER_TO_TARGET.get(player.getUUID());
-        if (targetId != null) {
-            ENTITY_INPUTS.put(targetId, input);
-            DebugLogManager.INSTANCE.log(DebugFeature.CONTROL,
-                    "input player=" + player.getName().getString() + " -> entity=" + targetId
-                            + " [u=" + input.up() + ",d=" + input.down() + ",l=" + input.left() + ",r=" + input.right()
-                            + ",j=" + input.jumping() + ",s=" + input.sneaking() + ",yaw=" + input.yaw() + ",pitch=" + input.pitch() + "]");
-        }
-    }
-
-    /**
-     * 供實體每一幀讀取自己的輸入
-     */
-    public ControlInputPayload getInput(Entity entity) {
-        return ENTITY_INPUTS.get(entity.getUUID());
-    }
+    public boolean isController(UUID uuid) { return CONTROLLER_TO_TARGETS.containsKey(uuid); }
+    public boolean isControlledTarget(UUID uuid) { return TARGET_TO_CONTROLLERS.containsKey(uuid); }
 
     public int controlledCount() {
-        return CONTROLLER_TO_TARGET.size();
+        return CONTROLLER_TO_TARGETS.size();
     }
 
     public int bufferedInputCount() {
         return ENTITY_INPUTS.size();
     }
 
-    public boolean setPlayerControl(ServerPlayer player, ControlType type, boolean enabled) {
-        if (player == null) {
-            return false;
-        }
-        boolean changed = setPlayerControl(player.getUUID(), type, enabled);
-        if (changed) {
-            syncControlState(player);
-        }
-        return changed;
-    }
-
-    public boolean setPlayerControl(UUID playerId, ControlType type, boolean enabled) {
-        if (playerId == null || type == null) {
-            return false;
-        }
-
-        if (enabled) {
-            Set<ControlType> disabled = PLAYER_DISABLED_CONTROLS.get(playerId);
-            if (disabled == null) {
-                return false;
-            }
-
-            boolean changed = disabled.remove(type);
-            if (disabled.isEmpty()) {
-                PLAYER_DISABLED_CONTROLS.remove(playerId, disabled);
-            }
-            return changed;
-        }
-
-        Set<ControlType> disabled = PLAYER_DISABLED_CONTROLS.computeIfAbsent(playerId,
-                ignored -> Collections.newSetFromMap(new ConcurrentHashMap<>()));
-        return disabled.add(type);
-    }
-
-    public boolean isPlayerControlEnabled(ServerPlayer player, ControlType type) {
-        if (player == null) {
-            return true;
-        }
-        return isPlayerControlEnabled(player.getUUID(), type);
-    }
-
-    public boolean isPlayerControlEnabled(UUID playerId, ControlType type) {
-        if (playerId == null || type == null) {
-            return true;
-        }
-        return !effectiveDisabledPlayerControls(playerId).contains(type);
-    }
-
-    public Set<ControlType> disabledPlayerControls(UUID playerId) {
-        if (playerId == null) {
-            return Set.of();
-        }
-        Set<ControlType> disabled = PLAYER_DISABLED_CONTROLS.get(playerId);
-        if (disabled == null || disabled.isEmpty()) {
-            return Set.of();
-        }
-        return Set.copyOf(EnumSet.copyOf(disabled));
-    }
-
     public Set<ControlType> effectiveDisabledPlayerControls(UUID playerId) {
-        EnumSet<ControlType> disabled = EnumSet.noneOf(ControlType.class);
-        disabled.addAll(disabledPlayerControls(playerId));
-
-        if (isController(playerId)) {
-            disabled.add(ControlType.MOVE);
-            disabled.add(ControlType.SPRINT);
-            disabled.add(ControlType.SNEAK);
-            disabled.add(ControlType.CRAWL);
-            disabled.add(ControlType.JUMP);
-        }
-
-        if (isControlledTarget(playerId)) {
-            disabled.addAll(EnumSet.allOf(ControlType.class));
-        }
-
-        return Set.copyOf(disabled);
+        int mask = PLAYER_PERMISSIONS.getOrDefault(playerId, 0);
+        return Arrays.stream(ControlType.values())
+                .filter(t -> (mask & (1 << t.ordinal())) != 0)
+                .collect(Collectors.toSet());
     }
 
-    public void clearPlayerControls(UUID playerId) {
-        if (playerId == null) {
-            return;
-        }
-        PLAYER_DISABLED_CONTROLS.remove(playerId);
-    }
-
-    public void clearAllPlayerControls() {
-        PLAYER_DISABLED_CONTROLS.clear();
-    }
-
-    public int encodeDisabledMask(Set<ControlType> disabled) {
-        if (disabled == null || disabled.isEmpty()) {
-            return 0;
-        }
-        int mask = 0;
-        for (ControlType type : disabled) {
-            mask |= (1 << type.ordinal());
-        }
-        return mask;
-    }
+    // --- 同步 (Sync) ---
 
     public void syncControlState(ServerPlayer player) {
-        if (player == null) {
-            return;
-        }
-
-        UUID playerId = player.getUUID();
-        Set<ControlType> disabled = effectiveDisabledPlayerControls(playerId);
-        ServerControlNetworking.syncControlState(
-                player,
-                encodeDisabledMask(disabled),
-                isController(playerId),
-                isControlledTarget(playerId)
-        );
+        if (player == null) return;
+        int mask = PLAYER_PERMISSIONS.getOrDefault(player.getUUID(), 0);
+        ServerControlNetworking.syncControlState(player, mask, isController(player.getUUID()), isControlledTarget(player.getUUID()));
     }
 
-    private boolean bindInternal(UUID controllerId, UUID targetId, Set<UUID> syncTargets) {
-        if (controllerId == null || targetId == null || controllerId.equals(targetId)) {
-            return false;
-        }
-
-        if (isControlledTarget(controllerId)) {
-            return false;
-        }
-
-        syncTargets.add(controllerId);
-        syncTargets.add(targetId);
-
-        UUID oldTarget = CONTROLLER_TO_TARGET.remove(controllerId);
-        if (oldTarget != null) {
-            TARGET_TO_CONTROLLER.remove(oldTarget, controllerId);
-            ENTITY_INPUTS.remove(oldTarget);
-            syncTargets.add(oldTarget);
-        }
-
-        UUID oldController = TARGET_TO_CONTROLLER.remove(targetId);
-        if (oldController != null) {
-            CONTROLLER_TO_TARGET.remove(oldController, targetId);
-            syncTargets.add(oldController);
-        }
-
-        // 如果目標本身是控制者，解除其既有控制關係（被接管者不可再操控他人）。
-        UUID targetWasControlling = CONTROLLER_TO_TARGET.remove(targetId);
-        if (targetWasControlling != null) {
-            TARGET_TO_CONTROLLER.remove(targetWasControlling, targetId);
-            ENTITY_INPUTS.remove(targetWasControlling);
-            syncTargets.add(targetWasControlling);
-        }
-
-        CONTROLLER_TO_TARGET.put(controllerId, targetId);
-        TARGET_TO_CONTROLLER.put(targetId, controllerId);
-        return true;
-    }
-
-    private void unbindControllerInternal(UUID controllerId, Set<UUID> syncTargets) {
-        UUID targetId = CONTROLLER_TO_TARGET.remove(controllerId);
-        if (targetId != null) {
-            TARGET_TO_CONTROLLER.remove(targetId, controllerId);
-            ENTITY_INPUTS.remove(targetId);
-            syncTargets.add(controllerId);
-            syncTargets.add(targetId);
-            DebugLogManager.INSTANCE.log(DebugFeature.CONTROL,
-                    "unbind controller=" + controllerId + " from target=" + targetId);
-        }
-    }
-
-    private void unbindTargetInternal(UUID targetId, Set<UUID> syncTargets) {
-        UUID controllerId = TARGET_TO_CONTROLLER.remove(targetId);
-        if (controllerId != null) {
-            CONTROLLER_TO_TARGET.remove(controllerId, targetId);
-            ENTITY_INPUTS.remove(targetId);
-            syncTargets.add(controllerId);
-            syncTargets.add(targetId);
-            DebugLogManager.INSTANCE.log(DebugFeature.CONTROL,
-                    "unbind target=" + targetId + " from controller=" + controllerId);
-        }
-    }
-
-    private void syncPlayers(MinecraftServer server, Set<UUID> playerIds) {
-        if (server == null || playerIds == null || playerIds.isEmpty()) {
-            return;
-        }
-        for (UUID playerId : playerIds) {
-            ServerPlayer online = server.getPlayerList().getPlayer(playerId);
-            if (online != null) {
-                syncControlState(online);
-            }
-        }
+    private void syncPlayerByUuid(MinecraftServer server, UUID uuid) {
+        if (server == null) return;
+        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+        if (player != null) syncControlState(player);
     }
 }

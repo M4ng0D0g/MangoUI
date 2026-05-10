@@ -3,10 +3,13 @@
 	"package": "com.myudog.myulib.client.mixin.client",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ExampleClientMixin",
 		"camera.CameraMixin",
-		"MixinKeyboardInput",
-		"MixinMouse"
+		"camera.GameOptionsMixin",
+		"camera.GuiMixin",
+		"camera.KeyboardMixin",
+		"camera.MouseMixin",
+		"control.KeyboardInputMixin",
+		"control.MouseInputMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

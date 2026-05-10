@@ -15,7 +15,9 @@
 		"MixinPressurePlatePermission",
 		"MixinTripWirePermission",
 		"MixinServerMessagePermission",
-		"MixinEntityPortalPermission"
+		"MixinEntityPortalPermission",
+		"MixinControlManagerEnforcement",
+		"MixinPlayerControlManagerEnforcement"
 	],
 	"injectors": {
 		"defaultRequire": 1
