@@ -10,7 +10,7 @@ if "%~1"=="" (
 )
 set MSG=%~1
 set COMMIT_MSG=!VERSION!:Release:!MSG!
-set TAG_NAME=v!VERSION!
+set TAG_NAME=!VERSION!
 echo [Release] Creating Tag: !TAG_NAME!
 echo [Release] Commit Message: !COMMIT_MSG!
 git add .
