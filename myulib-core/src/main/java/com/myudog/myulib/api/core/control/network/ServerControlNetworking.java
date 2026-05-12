@@ -66,6 +66,14 @@ public final class ServerControlNetworking {
                 (payload, context) -> context.server().execute(() -> {
                     if (context.player().level() instanceof ServerLevel serverLevel) {
                         ControlManager.INSTANCE.updateInput(context.player(), serverLevel, payload);
+                        
+                        // 只在有輸入時 Log，避免每 tick 刷頻
+                        if (payload.up() || payload.down() || payload.left() || payload.right() || payload.jumping() || payload.sneaking()) {
+                            com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                                    com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                                    "Net Recv Input: Player[" + context.player().getName().getString() + "]"
+                            );
+                        }
                     }
                 }));
 
@@ -73,7 +81,20 @@ public final class ServerControlNetworking {
         ServerPlayNetworking.registerGlobalReceiver(ControlIntentPayload.TYPE,
                 (payload, context) -> context.server().execute(() -> {
                     if (context.player() instanceof IPlayerController controller) {
-                        Intent intent = new Intent(payload.intentType(), payload.vector(), payload.keyCode(), payload.customAction());
+                        Intent intent = new Intent(
+                                payload.intentType(),
+                                payload.inputAction(),
+                                payload.vector(),
+                                payload.keyCode(),
+                                payload.customAction(),
+                                payload.timestamp()
+                        );
+                        
+                        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                                "Net Recv Intent: Player[" + context.player().getName().getString() + "] -> " + intent.type() + ":" + intent.action()
+                        );
+                        
                         controller.myulib_mc$dispatchIntent(intent);
                     }
                 }));

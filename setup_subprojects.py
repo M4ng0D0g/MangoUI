@@ -36,7 +36,6 @@ base {
 repositories {
     gradlePluginPortal()
     mavenCentral()
-    maven { url = "https://maven.maxhenkel.de/repository/public" }
     maven {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
@@ -58,7 +57,6 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    implementation "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
     testImplementation "org.junit.platform:junit-platform-suite-engine:1.10.0"
@@ -74,8 +72,7 @@ tasks.named('test') {
 
 processResources {
     def expandProps = [
-            "version": project.version,
-            "voicechat_api_version": project.voicechat_api_version
+            "version": project.version
     ]
     inputs.properties expandProps
     filesMatching("fabric.mod.json") {

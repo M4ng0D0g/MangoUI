@@ -47,6 +47,11 @@ public final class ControlRegistry {
             targetToControllers
                     .computeIfAbsent(targetId, k -> ConcurrentHashMap.newKeySet())
                     .add(controllerId);
+
+            com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                    com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                    "Registry Add: [" + controllerId + "] -> [" + targetId + "]"
+            );
         }
         return added;
     }
@@ -71,6 +76,13 @@ public final class ControlRegistry {
             if (controllers.isEmpty()) targetToControllers.remove(targetId);
         }
 
+        if (removed) {
+            com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                    com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                    "Registry Remove: [" + controllerId + "] -X- [" + targetId + "]"
+            );
+        }
+
         return removed;
     }
 
@@ -81,6 +93,12 @@ public final class ControlRegistry {
         if (controllerId == null) return;
         Set<UUID> targets = controllerToTargets.remove(controllerId);
         if (targets == null) return;
+
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "Registry Clear Player: [" + controllerId + "], targets released: " + targets.size()
+        );
+
         for (UUID targetId : targets) {
             Set<UUID> controllers = targetToControllers.get(targetId);
             if (controllers != null) {
@@ -97,6 +115,12 @@ public final class ControlRegistry {
         if (targetId == null) return;
         Set<UUID> controllers = targetToControllers.remove(targetId);
         if (controllers == null) return;
+
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "Registry Clear Target: [" + targetId + "], controllers notified: " + controllers.size()
+        );
+
         for (UUID controllerId : controllers) {
             Set<UUID> targets = controllerToTargets.get(controllerId);
             if (targets != null) {

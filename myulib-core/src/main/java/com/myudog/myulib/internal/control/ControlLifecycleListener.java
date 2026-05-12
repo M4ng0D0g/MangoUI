@@ -17,8 +17,15 @@ public final class ControlLifecycleListener {
         // 1. 玩家斷線 → 清除其所有綁定與權限狀態
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             java.util.UUID playerId = handler.player.getUUID();
+            
+            com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                    com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                    "Lifecycle: Player Disconnect [" + handler.player.getName().getString() + "], clearing data..."
+            );
+            
             ControlRegistry.INSTANCE.removeAllByController(playerId);
             com.myudog.myulib.api.core.control.PlayerInputGate.INSTANCE.onPlayerDisconnect(playerId);
+            InputSequenceTracker.INSTANCE.clear(playerId);
         });
 
         // 2. 實體死亡：透過 Mixin 的 clearControllers() 觸發（已在 MixinLivingEntityControl 中委派）
@@ -26,10 +33,10 @@ public final class ControlLifecycleListener {
         ServerEntityLevelChangeEvents.AFTER_ENTITY_CHANGE_LEVEL.register(
                 (originalEntity, newEntity, origin, destination) -> {
                     if (originalEntity instanceof LivingEntity) {
-                        // 目標維度切換後，舊 UUID 仍有效，無需清理
-                        // 但若有系統追蹤的是世界級實例引用，在這裡清除
-
-                        // ControlRegistry.INSTANCE.updateEntityReference(newEntity.getUuid(), newEntity);
+                        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                                "Lifecycle: Entity Dimension Change [" + originalEntity.getUUID() + "]"
+                        );
                     }
                 }
         );

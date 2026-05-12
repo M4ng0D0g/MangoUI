@@ -18,9 +18,6 @@
     "main": [
       "com.myudog.myulib.MyulibFramework"
     ],
-    "voicechat": [
-      "com.myudog.myulib.api.bridge.voice.MyuVoicePlugin"
-    ],
     "client": [
       "com.myudog.myulib.client.MyulibFrameworkClient"
     ]
@@ -34,7 +31,6 @@
     "minecraft": "~26.1",
     "java": ">=25",
     "fabric-api": "*",
-    "voicechat_api": ">=${voicechat_api_version}",
     "myulib-core": "*"
   }
 }

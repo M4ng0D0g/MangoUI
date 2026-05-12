@@ -17,48 +17,37 @@ import java.util.UUID;
 
 /**
  * 玩家對多實體的控制管理器 (1-to-N, ID-Based)
- * <p>
- * 僅以 UUID 儲存綁定關係，不持有任何實體強引用。
- * dispatchIntent 時透過 ServerWorld#getEntity(UUID) 動態解析，
- * 若實體已卸載則靜默跳過，不破壞綁定關係（支援斷線重連）。
  */
 public class PlayerControlManager {
 
     private final UUID playerUuid;
-    // 僅存 UUID，無記憶體洩漏風險
     private final Set<UUID> boundEntityIds = new HashSet<>();
 
     public PlayerControlManager(ServerPlayer player) {
         this.playerUuid = player.getUUID();
     }
 
-    // -------------------------------------------------------------------------
-    // Binding API
-    // -------------------------------------------------------------------------
-
     public boolean bindControl(UUID targetUuid) {
-        if (targetUuid == null || targetUuid.equals(playerUuid)) {
-            return false;
-        }
-        // 防止重複綁定
-        if (boundEntityIds.contains(targetUuid)) {
-            return false;
-        }
+        if (targetUuid == null || targetUuid.equals(playerUuid)) return false;
+        if (boundEntityIds.contains(targetUuid)) return false;
         boundEntityIds.add(targetUuid);
 
-        // 通知目標實體（若當前已在記憶體中）
-        // 此步驟為 best-effort，卸載中的實體重新載入後 isPossessed() 依靠 ControlManager 查詢
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "Bind: Player[" + playerUuid + "] -> Entity[" + targetUuid + "]"
+        );
         return true;
     }
 
     public boolean unbindControl(UUID targetUuid) {
-        if (targetUuid == null) {
-            return false;
-        }
+        if (targetUuid == null) return false;
         boolean removed = boundEntityIds.remove(targetUuid);
         if (removed) {
-            // 通知中央 ControlManager 清除反向索引
             ControlRegistry.INSTANCE.removeBinding(playerUuid, targetUuid);
+            com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                    com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                    "Unbind: Player[" + playerUuid + "] -X- Entity[" + targetUuid + "]"
+            );
         }
         return removed;
     }
@@ -70,29 +59,33 @@ public class PlayerControlManager {
     public void clearBindings(boolean keepSelf) {
         Set<UUID> toRemove = new HashSet<>(boundEntityIds);
         for (UUID id : toRemove) {
-            if (keepSelf && id.equals(playerUuid)) {
-                continue;
-            }
+            if (keepSelf && id.equals(playerUuid)) continue;
             boundEntityIds.remove(id);
             ControlRegistry.INSTANCE.removeBinding(playerUuid, id);
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Intent Dispatch (UUID → Entity resolution happens here)
-    // -------------------------------------------------------------------------
-
+    /**
+     * 分發意圖並記錄輸入序列
+     */
     public void dispatchIntent(Intent intent, Level level) {
-        if (!(level instanceof ServerLevel serverWorld)) {
-            return;
+        // 1. 記錄輸入序列 (用於特殊操作偵測)
+        InputSequenceTracker.INSTANCE.track(playerUuid, intent);
+
+        if (!(level instanceof ServerLevel serverWorld)) return;
+
+        // --- Debug Log ---
+        if (intent.type() != com.myudog.myulib.api.core.control.IntentType.MOVE_VECTOR && intent.type() != com.myudog.myulib.api.core.control.IntentType.ROTATE) {
+             com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                     com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                     "Dispatch: Player[" + playerUuid + "] -> Action[" + intent.type() + ":" + intent.action() + "]"
+             );
         }
 
+        // 2. 分發給綁定的實體
         for (UUID targetId : boundEntityIds) {
             Entity entity = serverWorld.getEntity(targetId);
-            // 若實體不在當前已載入的區塊中，靜默跳過（不移除綁定）
-            if (!(entity instanceof LivingEntity living)) {
-                continue;
-            }
+            if (!(entity instanceof LivingEntity living)) continue;
 
             if (intent.type() == IntentType.MOVE_VECTOR && living instanceof IControllableMovable movable) {
                 movable.myulib_mc$executeMove(intent.vector());
@@ -102,11 +95,6 @@ public class PlayerControlManager {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Lifecycle: called when entity dies or player disconnects
-    // -------------------------------------------------------------------------
-
-    /** 實體死亡或強制移除時，從綁定清單中剔除 */
     public boolean onEntityRemoved(UUID entityId) {
         return boundEntityIds.remove(entityId);
     }

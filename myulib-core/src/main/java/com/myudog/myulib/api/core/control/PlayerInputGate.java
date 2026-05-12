@@ -55,6 +55,12 @@ public final class PlayerInputGate {
         UUID id = player.getUUID();
         EnumSet<ControlType> set = denied.computeIfAbsent(id, k -> EnumSet.noneOf(ControlType.class));
         for (ControlType t : types) set.add(t);
+        
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "InputGate Deny: Player[" + player.getName().getString() + "] -> Types" + java.util.Arrays.toString(types)
+        );
+        
         sync(player);
     }
 
@@ -64,6 +70,12 @@ public final class PlayerInputGate {
     public void denyAll(ServerPlayer player) {
         if (player == null) return;
         denied.put(player.getUUID(), EnumSet.allOf(ControlType.class));
+        
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "InputGate DenyAll: Player[" + player.getName().getString() + "]"
+        );
+        
         sync(player);
     }
 
@@ -80,6 +92,12 @@ public final class PlayerInputGate {
         if (set == null) return;
         for (ControlType t : types) set.remove(t);
         if (set.isEmpty()) denied.remove(id);
+        
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "InputGate Grant: Player[" + player.getName().getString() + "] -> Types" + java.util.Arrays.toString(types)
+        );
+        
         sync(player);
     }
 
@@ -89,6 +107,12 @@ public final class PlayerInputGate {
     public void grantAll(ServerPlayer player) {
         if (player == null) return;
         denied.remove(player.getUUID());
+        
+        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
+                com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
+                "InputGate GrantAll: Player[" + player.getName().getString() + "]"
+        );
+        
         sync(player);
     }
 

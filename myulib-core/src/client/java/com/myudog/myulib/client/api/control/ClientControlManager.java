@@ -101,7 +101,14 @@ public final class ClientControlManager {
         // 權限映射檢查
         if (isIntentDenied(intent.type())) return;
 
-        ClientPlayNetworking.send(new ControlIntentPayload(intent.type(), intent.vector(), intent.keyCode(), intent.customAction()));
+        ClientPlayNetworking.send(new ControlIntentPayload(
+                intent.type(), 
+                intent.action(), 
+                intent.vector(), 
+                intent.keyCode(), 
+                intent.customAction(), 
+                intent.timestamp()
+        ));
     }
 
     private boolean isIntentDenied(IntentType type) {
