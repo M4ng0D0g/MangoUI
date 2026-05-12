@@ -6,11 +6,14 @@ import com.myudog.myulib.api.core.debug.DebugLogManager;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Objects;
 
+import com.myudog.myulib.api.core.camera.network.CameraNetworking;
+
 public final class CameraApi {
     private CameraApi() {
     }
 
     public static void initServer() {
+        CameraNetworking.initServer();
     }
 
     public static void initClient() {

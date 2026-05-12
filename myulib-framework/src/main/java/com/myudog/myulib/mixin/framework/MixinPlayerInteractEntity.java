@@ -1,4 +1,4 @@
-package com.myudog.myulib.mixin;
+package com.myudog.myulib.mixin.framework;
 
 import com.myudog.myulib.api.core.debug.DebugTraceManager;
 import com.myudog.myulib.api.core.object.ObjectManager;

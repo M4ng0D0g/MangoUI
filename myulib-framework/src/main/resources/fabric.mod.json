@@ -23,8 +23,7 @@
     ]
   },
   "mixins": [
-    "myulib.mixins.json",
-    "myulib.client.mixins.json"
+    "myulib-framework.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.18.6",

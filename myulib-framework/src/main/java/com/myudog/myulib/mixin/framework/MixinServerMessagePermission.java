@@ -1,4 +1,4 @@
-package com.myudog.myulib.mixin;
+package com.myudog.myulib.mixin.framework;
 
 import com.myudog.myulib.api.framework.permission.PermissionAction;
 import com.myudog.myulib.api.framework.permission.PermissionGate;

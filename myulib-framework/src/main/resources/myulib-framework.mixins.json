@@ -1,0 +1,25 @@
+{
+	"required": true,
+	"package": "com.myudog.myulib.mixin.framework",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"MixinEntityPortalPermission",
+		"MixinFarmBlockPermission",
+		"MixinItemEntityPermission",
+		"MixinLivingEntity",
+		"MixinPlayerDropPermission",
+		"MixinPlayerEntity",
+		"MixinPlayerInteractEntity",
+		"MixinPlayerInteractionManager",
+		"MixinPressurePlatePermission",
+		"MixinServerMessagePermission",
+		"MixinServerPlayerControlPermission",
+		"MixinTripWirePermission"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

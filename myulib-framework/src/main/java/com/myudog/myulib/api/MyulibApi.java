@@ -1,27 +1,35 @@
 package com.myudog.myulib.api;
 
-import com.myudog.myulib.api.core.control.ControlManager;
-import com.myudog.myulib.api.core.debug.DebugLogManager;
-import com.myudog.myulib.api.core.hologram.network.HologramNetworking;
-import com.myudog.myulib.api.core.camera.CameraApi;
-import com.myudog.myulib.api.core.timer.TimerManager;
+import com.myudog.myulib.api.framework.field.FieldManager;
+import com.myudog.myulib.api.framework.permission.PermissionManager;
+import com.myudog.myulib.api.framework.rolegroup.RoleGroupManager;
 import com.myudog.myulib.api.framework.ui.network.ConfigUiNetworking;
 
 public final class MyulibApi {
-    public static void initCore() {
-        AccessSystems.init();
-        DebugLogManager.INSTANCE.install();
+    /**
+     * 初始化框架層系統。
+     * 這些系統依賴於 Core 層，但其邏輯屬於 Framework。
+     */
+    public static void initFramework() {
+        // 1. 初始化權限與區域管理系統 (包含 NBT 儲存註冊)
+        PermissionManager.INSTANCE.install();
+        FieldManager.INSTANCE.install();
+        RoleGroupManager.INSTANCE.install();
 
-        CameraApi.initServer();
-        ControlManager.INSTANCE.install();
-        HologramNetworking.registerPayloads();
+        // 2. 初始化框架層網路 (UI 等)
         ConfigUiNetworking.registerPayloads();
         ConfigUiNetworking.registerServerReceivers();
 
-        TimerManager.INSTANCE.install();
+        // 3. 初始化高階子系統 (指令、UI 橋接等)
+        AccessSystems.init();
     }
 
-    public static void initFramework() {
-        // Framework-level initialization (permission systems, game registry, etc.)
+    /**
+     * 過渡期方法：保留以維持相容性，但核心初始化現在應由 MyulibCore 直接負責。
+     * @deprecated 請改用 MyulibCore 或直接呼叫 initFramework()。
+     */
+    @Deprecated
+    public static void initCore() {
+        // Core 層現在已在 MyulibCore.onInitialize() 中自我初始化。
     }
 }
