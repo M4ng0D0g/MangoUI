@@ -8,10 +8,12 @@ import net.minecraft.resources.Identifier;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import com.myudog.myulib.api.core.ecs.EcsContainer;
+
 public class TimerRegistry {
     public static void register(TimerDefinition timer) { TimerManager.INSTANCE.register(timer); }
-    public static UUID createInstance(Identifier timerId, Long ownerEntityId, TimerPayload payload, boolean autoStart) {
+    public static int createInstance(EcsContainer container, Identifier timerId, Long ownerEntityId, TimerPayload payload) {
         UUID timerUuid = UUID.nameUUIDFromBytes(timerId.toString().getBytes(StandardCharsets.UTF_8));
-        return TimerManager.INSTANCE.createInstance(timerUuid, ownerEntityId, payload, autoStart);
+        return TimerManager.INSTANCE.createInstance(container, timerUuid, ownerEntityId, payload);
     }
 }

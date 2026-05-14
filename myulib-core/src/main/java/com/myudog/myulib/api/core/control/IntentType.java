@@ -2,39 +2,49 @@ package com.myudog.myulib.api.core.control;
 
 public enum IntentType {
     // ==========================================
-    // 向量移動類 (Vector Movement - 推薦用於視角解耦)
+    // 移動類 (Movement)
     // ==========================================
-    /** 帶有方向向量的移動指令 (將 WASD 轉換為絕對/相對 3D 向量後發送) */
-    MOVE_VECTOR,
+    /** 綜合移動指令 (Master Switch / Vector) */
+    MOVE,
+    MOVE_FORWARD,
+    MOVE_BACKWARD,
+    MOVE_LEFT,
+    MOVE_RIGHT,
 
+    // ==========================================
+    // 旋轉類 (Rotation)
+    // ==========================================
+    /** 綜合旋轉指令 (Master Switch / Combined) */
     ROTATE,
-
+    ROTATE_YAW,   // 水平旋轉
+    ROTATE_PITCH, // 垂直旋轉
 
     // ==========================================
     // 身體動作類 (Stance & Actions)
     // ==========================================
-    /** 跳躍 (Space) */
     JUMP,
-    /** 蹲下/潛行 (Shift) */
     SNEAK,
-    /** 衝刺 (Ctrl) */
     SPRINT,
+    CRAWL,
 
     // ==========================================
     // 戰鬥與交互類 (Combat & Interaction)
     // ==========================================
-    /** 左鍵：主要動作 (攻擊/破壞) */
     LEFT_CLICK,
-    /** 右鍵：次要動作 (使用/放置/交互) */
     RIGHT_CLICK,
+    MIDDLE_CLICK,
 
     // ==========================================
-    // 擴充按鍵類 (Extensible Keys)
+    // 功能鍵與特殊鍵 (Function Keys)
     // ==========================================
-    /** * 通用擴充按鍵 (Generic Custom Action)
-     * 建議用法：當擴充按鍵非常多時（例如鍵盤上所有的字母），
-     * 不需要為每個字母寫一個 Enum。只需發送 GENERIC_ACTION，
-     * 並在 `Intent` 的 payload (例如附加一個整數欄位) 中傳遞具體的 KeyCode。
-     */
-    GENERIC_ACTION
+    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    ESCAPE, TAB, CAPS_LOCK, ENTER, BACKSPACE,
+    
+    // ==========================================
+    // 原版常用按鍵 (Alpha-numeric if needed, or Generic)
+    // ==========================================
+    GENERIC_ACTION,
+    
+    /** 舊版移動向量支援 */
+    MOVE_VECTOR
 }

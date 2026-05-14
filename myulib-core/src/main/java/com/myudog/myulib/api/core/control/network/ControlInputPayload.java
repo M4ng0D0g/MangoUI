@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.control.network;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -20,7 +20,7 @@ public record ControlInputPayload(
         float yaw,   // 玩家當前的視角 X 軸旋轉 (滑鼠左右)
         float pitch  // 玩家當前的視角 Y 軸旋轉 (滑鼠上下)
 ) implements CustomPacketPayload {
-    public static final Identifier ID = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "control_input");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(MyulibCore.MOD_ID, "control_input");
     public static final Type<ControlInputPayload> TYPE = new Type<>(ID);
     public static final StreamCodec<RegistryFriendlyByteBuf, ControlInputPayload> CODEC =
             StreamCodec.of(ControlInputPayload::encode, ControlInputPayload::decode);

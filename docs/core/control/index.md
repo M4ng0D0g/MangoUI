@@ -3,9 +3,9 @@
 `Control` provides player-to-entity possession mapping and input buffering.
 
 ## Public API
-- `com.myudog.myulib.api.control.ControlManager`
-- `com.myudog.myulib.api.control.network.ControlInputPayload`
-- `com.myudog.myulib.api.control.network.ServerControlNetworking`
+- `com.myudog.myulib.api.core.control.ControlManager`
+- `com.myudog.myulib.api.core.control.network.ControlInputPayload`
+- `com.myudog.myulib.api.core.control.network.ServerControlNetworking`
 
 ## Notes
 - Mapping is one-to-one (`player -> entity`, `entity -> player`).

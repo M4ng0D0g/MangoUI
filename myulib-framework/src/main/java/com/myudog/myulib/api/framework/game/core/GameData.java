@@ -1,5 +1,6 @@
 package com.myudog.myulib.api.framework.game.core;
 
+import com.myudog.myulib.api.core.ecs.EcsContainer;
 import com.myudog.myulib.api.framework.game.features.*;
 
 public abstract class GameData {
@@ -11,12 +12,16 @@ public abstract class GameData {
 
     protected GameData() {}
 
+    public EcsContainer getEcsContainer() {
+        return ECS_FEATURE.getContainer();
+    }
+
     public GameData withEcs(EcsFeature ecsFeature) {
         this.ECS_FEATURE = ecsFeature;
         return this;
     }
 
-    public GameData withField( FieldFeature fieldFeature) {
+    public GameData withField(FieldFeature fieldFeature) {
         this.FIELD_FEATURE = fieldFeature;
         return this;
     }
@@ -32,13 +37,9 @@ public abstract class GameData {
     }
 
     public void clean(GameInstance<?, ?, ?> instance) {
-        ECS_FEATURE.clean(instance);
-        FIELD_FEATURE.clean(instance);
-        OBJECT_FEATURE.clean(instance);
-        TEAM_FEATURE.clean(instance);
+        if (ECS_FEATURE != null) ECS_FEATURE.clean(instance);
+        if (FIELD_FEATURE != null) FIELD_FEATURE.clean(instance);
+        if (OBJECT_FEATURE != null) OBJECT_FEATURE.clean(instance);
+        if (TEAM_FEATURE != null) TEAM_FEATURE.clean(instance);
     }
-
-
-
-
 }

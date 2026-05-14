@@ -2,7 +2,7 @@ package com.myudog.myulib.client.mixin.client.camera;
 
 import com.myudog.myulib.api.core.control.ControlType;
 import com.myudog.myulib.client.api.control.ClientControlManager;
-import com.myudog.myulib.internal.camera.ClientCameraManager;
+import com.myudog.myulib.client.api.camera.ClientCameraManager;
 import net.minecraft.client.MouseHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

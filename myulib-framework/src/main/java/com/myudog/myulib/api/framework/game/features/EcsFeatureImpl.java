@@ -11,10 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EcsFeatureImpl implements EcsFeature {
 
-    // 遵守 Java 命名規範，實例變數使用小駝峰
+    // ?萄? Java ?賢?閬?嚗祕靘??訾蝙?典?擏陸
     private final EcsContainer container = new EcsContainer();
 
-    // 🌟 核心升級：使用 ConcurrentHashMap 確保玩家並發加入/退出時的執行緒安全
+    // ?? ?詨???嚗蝙??ConcurrentHashMap 蝣箔??拙振銝衣?/??箸??銵?摰
     private final Map<UUID, Integer> participantToEntity = new ConcurrentHashMap<>();
 
     public EcsFeatureImpl() {}
@@ -26,38 +26,38 @@ public class EcsFeatureImpl implements EcsFeature {
 
     @Override
     public Optional<Integer> getEntity(@NotNull UUID uuid) {
-        // 🌟 效能優化：避免 containsKey + get 的兩次查找，直接取得並包裝
+        // ?? ??芸?嚗??containsKey + get ?甈⊥?橘??湔??銝血?鋆?
         return Optional.ofNullable(participantToEntity.get(uuid));
     }
 
     @Override
     public int getOrCreateParticipant(@NotNull UUID uuid) {
-        // 🌟 原子操作：如果沒有該 UUID，才會呼叫 container.createEntity()，並保證執行緒安全
+        // ?? ????嚗????府 UUID嚗????container.createEntity()嚗蒂靽??瑁?蝺???
         return participantToEntity.computeIfAbsent(uuid, k -> container.createEntity());
     }
 
     @Override
     public int removeParticipant(@NotNull UUID uuid) {
-        // 直接移除並獲取舊值，避免多次查詢
+        // ?湔蝘駁銝衣???潘??踹?憭活?亥岷
         Integer entityId = participantToEntity.remove(uuid);
 
         if (entityId == null) {
             return -1;
         }
 
-        // 確實銷毀底層 ECS 容器中的實體
+        // 蝣箏祕?瑟?摨惜 ECS 摰孵銝剔?撖阡?
         container.destroyEntity(entityId);
         return entityId;
     }
 
     @Override
     public void clean(GameInstance<?, ?, ?> instance) {
-        // 🌟 實作清理邏輯：銷毀所有綁定的玩家實體
+        // ?? 撖虫?皜??摩嚗瘥???摰??拙振撖阡?
         for (Integer entityId : participantToEntity.values()) {
             container.destroyEntity(entityId);
         }
 
-        // 清空映射表
+        // 皜征??銵?
         participantToEntity.clear();
     }
 }

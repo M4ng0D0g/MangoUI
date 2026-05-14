@@ -49,8 +49,4 @@ public class StateMachine<S extends IState<C>, C extends IStateContext<C>> imple
 
     }
 
-    @Override
-    public void tick(C context) {
-        if (currentState != null) currentState.onTick(context);
-    }
 }

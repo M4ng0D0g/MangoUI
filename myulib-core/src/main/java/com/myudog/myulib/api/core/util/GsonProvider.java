@@ -10,7 +10,15 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 
 /**
- * 提供已註冊好所有 Minecraft 特殊型別轉換器的 Gson 實例。
+ * GsonProvider
+ *
+ * 系統：通用工具系統 (Utility System)
+ * 角色：JSON 序列化提供者，封裝了預設的 Gson 配置與 Minecraft 特殊類型適配器。
+ * 類型：Utility / Factory
+ *
+ * 提供了一個全域共享的 {@link Gson} 實例，預先註冊了：
+ * 1. {@link Identifier}：支援字串與 Identifier 的自動轉換。
+ * 2. {@link AABB}：支援碰撞箱座標的 JSON 序列化。
  */
 public class GsonProvider {
 

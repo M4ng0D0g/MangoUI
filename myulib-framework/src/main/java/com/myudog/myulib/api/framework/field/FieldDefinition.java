@@ -10,14 +10,24 @@ import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 定義一個獨立的遊戲/保護區域。
- * 權限相關設定交由外部 Permission 系統處理，可將資料存放於 fieldData 中。
+ * FieldDefinition
+ *
+ * 蝟餌絞嚗??脣?啁頂蝯?(Framework - Field)
+ * 閫嚗?蝢拐??蝡??/靽風????嗅惇?扼?
+ * 憿?嚗ecord / Data Holder
+ *
+ * 甇?Record 撠?鈭?啁??詨?蝛粹?鞈?嚗雁摨西???嚗誑??????局 (fieldData)??
+ * 甈??賊?閮剖??虜摮??`fieldData` 銝哨?銝衣 Permission 蝟餌絞霈??
  */
 public record FieldDefinition(
+        /** ?游?銝霅蝣潦?*/
         @NotNull UUID uuid,
-        @NotNull Identifier dimensionId, // 例如: minecraft:overworld
-        @NotNull AABB bounds,            // 核心：原版碰撞箱
-        Map<String, Object> fieldData // 未來放置權限表 (RoleGroup, Enum 狀態) 的擴充槽
+        /** ??函?蝬剖漲霅蝣潦?*/
+        @NotNull Identifier dimensionId,
+        /** ?游???寥?蝛粹?????*/
+        @NotNull AABB bounds,
+        /** ?游?鞈?瑽踝??冽摮憒???????蝐斤??芸?蝢抵???*/
+        Map<String, Object> fieldData
 ) {
     public static final String ROUTE = "field";
 

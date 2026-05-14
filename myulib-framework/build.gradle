@@ -25,8 +25,19 @@ loom {
             sourceSet sourceSets.client
         }
     }
-    mixin {
-        defaultRefmapName = "myulib-framework-refmap.json"
+    runs {
+        client {
+            client()
+            name "Minecraft Client - Framework"
+            ideConfigGenerated true
+            runDir "run"
+        }
+        server {
+            server()
+            name "Minecraft Server - Framework"
+            ideConfigGenerated true
+            runDir "run"
+        }
     }
 }
 

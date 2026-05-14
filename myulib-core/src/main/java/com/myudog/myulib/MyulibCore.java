@@ -1,36 +1,40 @@
 package com.myudog.myulib;
 
+import com.myudog.myulib.api.MyulibApi;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * MyulibCore
+ *
+ * 系統：核心框架入口 (Core Framework Entry)
+ * 角色：Mod 的主要初始化類別，負責依序啟動所有核心子系統（除錯、控制、相機、計時器等）。
+ * 類型：Main / Entry Point
+ */
 public final class MyulibCore implements ModInitializer {
     public static final String MOD_ID = "myulib-core";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+    /**
+     * 輔助方法：根據路徑生成屬於本 Mod 的 Identifier。
+     *
+     * @param path 資源路徑 (如 "control_packet")
+     * @return 完整的 Identifier
+     */
     public static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MOD_ID, path.trim().toLowerCase());
     }
 
+    /**
+     * Fabric Mod 初始化入口。
+     * 此方法按順序引導系統啟動，確保依賴關係正確處理。
+     */
     @Override
     public void onInitialize() {
         LOGGER.info("MyuLib Core is initializing...");
-        
-        // 1. 初始化基礎除錯系統
-        com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.install();
-
-        // 2. 初始化控制系統 (包含網路接收器)
-        com.myudog.myulib.api.core.control.ControlManager.INSTANCE.install();
-        com.myudog.myulib.internal.control.ControlLifecycleListener.register();
-
-        // 3. 註冊網路載荷 (Payloads)
-        com.myudog.myulib.api.core.hologram.network.HologramNetworking.registerPayloads();
-
-        // 4. 初始化相機與計時器系統
-        com.myudog.myulib.api.core.camera.CameraApi.initServer();
-        com.myudog.myulib.api.core.timer.TimerManager.INSTANCE.install();
-
+        MyulibApi.initCore();
         LOGGER.info("MyuLib Core initialized.");
     }
 }

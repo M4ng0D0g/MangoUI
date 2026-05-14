@@ -3,10 +3,10 @@
 This module provides camera actions and client-side modifiers.
 
 ## Public API
-- `com.myudog.myulib.api.camera.CameraApi`
-- `com.myudog.myulib.api.camera.CameraActionPayload`
-- `com.myudog.myulib.api.camera.CameraTrackingTarget`
-- `com.myudog.myulib.api.camera.CameraDispatchBridge`
+- `com.myudog.myulib.api.core.camera.CameraApi`
+- `com.myudog.myulib.api.core.camera.CameraActionPayload`
+- `com.myudog.myulib.api.core.camera.CameraTrackingTarget`
+- `com.myudog.myulib.api.core.camera.CameraDispatchBridge`
 
 ## Runtime path
 - Common API: `src/main/java/com/myudog/myulib/api/camera/`

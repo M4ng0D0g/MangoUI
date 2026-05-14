@@ -1,276 +1,101 @@
 package com.myudog.myulib.api.core.timer;
 
-import com.myudog.myulib.Myulib;
-import com.myudog.myulib.api.core.debug.DebugFeature;
-import com.myudog.myulib.api.core.debug.DebugLogManager;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.server.MinecraftServer;
+import com.myudog.myulib.api.core.ecs.EcsContainer;
+import java.util.*;
 
-import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
+/**
+ * TimerManager
+ *
+ * 系統：核心計時系統 (Core Timer System) - ECS 版
+ * 角色：驅動所有實體上的 TimerInstance。
+ */
 public final class TimerManager {
 
     public static final TimerManager INSTANCE = new TimerManager();
+    
+    /** 全域 ECS 容器，用於相容舊有的全域計時器。 */
+    public final EcsContainer GLOBAL_CONTAINER = new EcsContainer();
 
-    // 🌟 全域藍圖庫：Map<DefinitionUUID, TimerDefinition>
-    private final Map<UUID, TimerDefinition> TIMERS = new LinkedHashMap<>();
-
-    // 🌟 全域實例追蹤庫：Map<InstanceUUID, TimerInstance>
-    private final Map<UUID, TimerInstance> INSTANCES = new ConcurrentHashMap<>();
+    private final Map<UUID, TimerDefinition> DEFINITIONS = new LinkedHashMap<>();
 
     private TimerManager() {
     }
 
     public void install() {
-        // 1. 掛載伺服器 Tick 事件 (驅動 Timer 的核心引擎)
-        ServerTickEvents.END_SERVER_TICK.register(TimerManager.INSTANCE::update);
-
-        // 2. 掛載伺服器停止事件 (安全機制)
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            TIMERS.clear();
-            INSTANCES.clear();
-            System.out.println("[Myulib] TimerManager 已成功釋放！");
+        // 全域容器的更新邏輯可以掛載在伺服器 Tick 事件上
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+            update(GLOBAL_CONTAINER);
         });
-
-        System.out.println("[Myulib] TimerManager 事件已成功掛載！");
     }
 
     public void register(TimerDefinition timer) {
-        if (!validate(timer)) {
-            throw new IllegalArgumentException("TimerDefinition 驗證失敗: " + (timer == null ? "null" : timer.uuid));
-        }
-        TIMERS.put(timer.uuid, timer);
-        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
-                "register defId=" + timer.uuid + ",duration=" + timer.durationTicks + ",mode=" + timer.mode);
+        DEFINITIONS.put(timer.uuid, timer);
     }
-
-    public boolean validate(TimerDefinition timer) {
-        return timer != null && timer.uuid != null && !TIMERS.containsKey(timer.uuid);
+    
+    public TimerDefinition unregister(UUID uuid) {
+        return DEFINITIONS.remove(uuid);
     }
-
-    public TimerDefinition unregister(UUID defUuid) {
-        DebugLogManager.INSTANCE.log(DebugFeature.TIMER, "unregister defId=" + defUuid);
-        return TIMERS.remove(defUuid);
+    
+    public boolean hasDefinition(UUID uuid) {
+        return DEFINITIONS.containsKey(uuid);
     }
-
-    public boolean hasDefinition(UUID defUuid) {
-        return TIMERS.containsKey(defUuid);
-    }
-
-    public TimerDefinition getDefinition(UUID defUuid) {
-        return TIMERS.get(defUuid);
-    }
-
-    // ==========================================================================================
-    // 實例管理 (Instance Management) - 統一使用 UUID
-    // ==========================================================================================
-
-    /**
-     * 創建一個計時器實例，並配發一個唯一的 Instance UUID
-     */
-    public UUID createInstance(UUID defUuid, Long ownerEntityId, TimerPayload payload, boolean autoStart) {
-        TimerDefinition timer = TIMERS.get(defUuid);
-        if (timer == null) {
-            throw new IllegalArgumentException("Unknown timer definition: " + defUuid);
-        }
-
-        UUID instanceId = UUID.randomUUID(); // 🌟 配發實例專屬的 UUID
-        TimerInstance instance = new TimerInstance(instanceId, defUuid, ownerEntityId, payload);
-        INSTANCES.put(instanceId, instance);
-
-        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
-                "create instance=" + instanceId + ",defId=" + defUuid + ",owner=" + ownerEntityId + ",autoStart=" + autoStart);
-
-        if (autoStart) {
-            start(instanceId);
-        }
-        return instanceId;
-    }
-
-    public TimerInstance getInstance(UUID instanceId) {
-        return INSTANCES.get(instanceId);
-    }
-
-    public TimerSnapshot getSnapshot(UUID instanceId) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance == null) {
-            return null;
-        }
-        TimerDefinition timer = TIMERS.get(instance.defId); // 🌟 讀取 defId
-        if (timer == null) {
-            return null;
-        }
-        long remaining = Math.max(0L, timer.durationTicks - instance.elapsedTicks);
-        return new TimerSnapshot(instanceId, instance.ownerEntityId, timer, instance.status, instance.elapsedTicks, remaining, instance.payload, instance.lastUpdatedTick);
-    }
-
-    public List<TimerInstance> findInstances(Long ownerEntityId) {
-        return INSTANCES.values().stream().filter(instance -> Objects.equals(instance.ownerEntityId, ownerEntityId)).toList();
-    }
-
-    public boolean isRunning(UUID instanceId) { return getInstance(instanceId) != null && getInstance(instanceId).isRunning(); }
-    public boolean isPaused(UUID instanceId) { return getInstance(instanceId) != null && getInstance(instanceId).isPaused(); }
-    public boolean isStopped(UUID instanceId) { return getInstance(instanceId) != null && getInstance(instanceId).isStopped(); }
-    public boolean isCompleted(UUID instanceId) { return getInstance(instanceId) != null && getInstance(instanceId).isCompleted(); }
-
-    public void start(UUID instanceId) {
-        updateState(instanceId, TimerStatus.RUNNING, snapshot -> snapshot.timer().startedActions.forEach(action -> action.invoke(snapshot)));
-    }
-
-    /**
-     * 快速建立一次性計時器
-     */
-    public UUID start(long ticks, Consumer<UUID> onExpire) {
-        String timerKey = "auto_timer_" + UUID.randomUUID();
-        UUID defId = stableUuid(timerKey);
-
-        TimerDefinition timer = new TimerDefinition(defId, ticks, TimerMode.COUNT_DOWN, true)
-                .onCompleted(snapshot -> {
-                    if (onExpire != null) {
-                        onExpire.accept(snapshot.instanceId());
-                    }
-                    unregister(defId); // 執行完畢自動註銷藍圖
-                });
-        register(timer);
-        return createInstance(defId, null, null, true);
-    }
-
-    public void pause(UUID instanceId) {
-        updateState(instanceId, TimerStatus.PAUSED, snapshot -> snapshot.timer().pausedActions.forEach(action -> action.invoke(snapshot)));
-    }
-
-    public void resume(UUID instanceId) {
-        updateState(instanceId, TimerStatus.RUNNING, snapshot -> snapshot.timer().resumedActions.forEach(action -> action.invoke(snapshot)));
-    }
-
-    public void stop(UUID instanceId) {
-        updateState(instanceId, TimerStatus.STOPPED, snapshot -> snapshot.timer().stoppedActions.forEach(action -> action.invoke(snapshot)));
-    }
-
-    public void reset(UUID instanceId, boolean clearPayload) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance == null) return;
-        instance.elapsedTicks = 0;
-        instance.lastUpdatedTick = 0;
-        instance.pausedTicks = 0;
-        instance.status = TimerStatus.IDLE;
-        if (clearPayload) {
-            instance.payload = null;
-        }
-        DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
-                "reset instance=" + instanceId + ",clearPayload=" + clearPayload);
-    }
-
-    public void setElapsedTicks(UUID instanceId, long ticks) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance != null) {
-            instance.elapsedTicks = Math.max(0L, ticks);
-        }
-    }
-
-    public void setRemainingTicks(UUID instanceId, long ticks) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance != null) {
-            TimerDefinition timer = TIMERS.get(instance.defId);
-            if (timer != null) {
-                setElapsedTicks(instanceId, Math.max(0L, timer.durationTicks - ticks));
-            }
-        }
-    }
-
-    public void setPayload(UUID instanceId, TimerPayload payload) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance != null) {
-            instance.payload = payload;
-        }
-    }
-
+    
     public int timerDefinitionCount() {
-        return TIMERS.size();
+        return DEFINITIONS.size();
     }
-
+    
     public int timerInstanceCount() {
-        return INSTANCES.size();
+        // 這裡回傳全域容器中的實例數量
+        int[] count = {0};
+        GLOBAL_CONTAINER.forAll(TimerInstance.class, (id, inst) -> count[0]++);
+        return count[0];
     }
 
-    // ==========================================================================================
-    // 核心 Tick 引擎
-    // ==========================================================================================
+    public void update(EcsContainer container) {
+        container.forAll(TimerInstance.class, (entityId, timer) -> {
+            if (timer.status != TimerStatus.RUNNING) return;
 
-    public void update(MinecraftServer server) {
-        java.util.Iterator<Map.Entry<UUID, TimerInstance>> iterator = INSTANCES.entrySet().iterator();
+            timer.elapsedTicks++;
+            TimerDefinition def = DEFINITIONS.get(timer.defId);
+            if (def == null) return;
 
-        while (iterator.hasNext()) {
-            Map.Entry<UUID, TimerInstance> entry = iterator.next();
-            UUID instanceId = entry.getKey();
-            TimerInstance instance = entry.getValue();
+            TimerSnapshot snapshot = createSnapshot(entityId, container, timer, def);
+            
+            // 檢查綁定
+            long remaining = Math.max(0L, def.durationTicks - timer.elapsedTicks);
+            def.elapsedBindings.values().forEach(b -> {
+                if (b.basis() == TimerTickBasis.ELAPSED && b.matches(timer.elapsedTicks)) b.action().invoke(snapshot);
+            });
+            def.remainingBindings.values().forEach(b -> {
+                if (b.basis() == TimerTickBasis.REMAINING && b.matches(remaining)) b.action().invoke(snapshot);
+            });
 
-            // 防漏水機制：如果計時器已經停止或完成，將其從背景移除
-            if (instance.isStopped() || instance.isCompleted()) {
-                iterator.remove();
-                continue;
+            if (timer.elapsedTicks >= def.durationTicks) {
+                timer.status = TimerStatus.COMPLETED;
+                def.completedActions.forEach(a -> a.invoke(snapshot));
+                if (def.autoStopOnComplete) timer.status = TimerStatus.STOPPED;
             }
-
-            if (!instance.isRunning()) continue;
-
-            instance.elapsedTicks++;
-            instance.lastUpdatedTick++;
-            TimerDefinition timer = TIMERS.get(instance.defId);
-
-            if (timer == null) continue;
-
-            TimerSnapshot snapshot = getSnapshot(instanceId);
-            if (snapshot != null) {
-                long remaining = Math.max(0L, timer.durationTicks - instance.elapsedTicks);
-
-                for (TimerBinding binding : timer.elapsedBindings.values()) {
-                    if (binding.basis() == TimerTickBasis.ELAPSED && binding.matches(instance.elapsedTicks)) {
-                        binding.action().invoke(snapshot);
-                    }
-                }
-
-                for (TimerBinding binding : timer.remainingBindings.values()) {
-                    if (binding.basis() == TimerTickBasis.REMAINING && binding.matches(remaining)) {
-                        binding.action().invoke(snapshot);
-                    }
-                }
-
-                if (instance.elapsedTicks >= timer.durationTicks) {
-                    instance.status = TimerStatus.COMPLETED;
-                    timer.completedActions.forEach(action -> action.invoke(snapshot));
-                    DebugLogManager.INSTANCE.log(DebugFeature.TIMER,
-                            "completed instance=" + instanceId + ",defId=" + instance.defId + ",elapsed=" + instance.elapsedTicks);
-
-                    if (timer.autoStopOnComplete) {
-                        instance.status = TimerStatus.STOPPED;
-                    }
-                }
-            }
-        }
+        });
     }
 
-    private void updateState(UUID instanceId, TimerStatus status, java.util.function.Consumer<TimerSnapshot> actionConsumer) {
-        TimerInstance instance = INSTANCES.get(instanceId);
-        if (instance == null) return;
-
-        instance.status = status;
-        DebugLogManager.INSTANCE.log(DebugFeature.TIMER, "state instance=" + instanceId + " -> " + status);
-
-        TimerSnapshot snapshot = getSnapshot(instanceId);
-        if (snapshot != null) {
-            actionConsumer.accept(snapshot);
-        }
+    private TimerSnapshot createSnapshot(int entityId, EcsContainer container, TimerInstance timer, TimerDefinition def) {
+        long remaining = Math.max(0L, def.durationTicks - timer.elapsedTicks);
+        return new TimerSnapshot(timer.instanceId, null, def, timer.status, timer.elapsedTicks, remaining, timer.payload, 0);
     }
 
-    private static UUID stableUuid(String token) {
-        return UUID.nameUUIDFromBytes(token.getBytes(StandardCharsets.UTF_8));
+    public int createInstance(EcsContainer container, UUID defId, Long ownerEntityId, TimerPayload payload) {
+        TimerDefinition def = DEFINITIONS.get(defId);
+        if (def == null) throw new IllegalArgumentException("Unknown TimerDefinition: " + defId);
+
+        int id = container.createEntity(UUID.randomUUID());
+        TimerInstance instance = new TimerInstance(container.getUuid(id), defId, ownerEntityId, payload);
+        instance.status = TimerStatus.RUNNING;
+        container.addComponent(id, TimerInstance.class, instance);
+        return id;
+    }
+    
+    /** 舊版相容方法 */
+    public int createInstance(UUID defId, Long ownerEntityId, TimerPayload payload) {
+        return createInstance(GLOBAL_CONTAINER, defId, ownerEntityId, payload);
     }
 }

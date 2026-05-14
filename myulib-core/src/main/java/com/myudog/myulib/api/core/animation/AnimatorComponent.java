@@ -1,5 +1,8 @@
 package com.myudog.myulib.api.core.animation;
 
+import com.myudog.myulib.api.core.debug.DebugFeature;
+import com.myudog.myulib.api.core.debug.DebugLogManager;
+
 import java.util.Objects;
 
 public final class AnimatorComponent<T> {
@@ -50,17 +53,20 @@ public final class AnimatorComponent<T> {
             applyCurrentValue();
         }
         state = PlaybackState.PLAYING;
+        DebugLogManager.INSTANCE.log(DebugFeature.ANIMATION, "play");
     }
 
     public void pause() {
         if (state == PlaybackState.PLAYING) {
             state = PlaybackState.PAUSED;
+            DebugLogManager.INSTANCE.log(DebugFeature.ANIMATION, "pause");
         }
     }
 
     public void resume() {
         if (state == PlaybackState.PAUSED) {
             state = PlaybackState.PLAYING;
+            DebugLogManager.INSTANCE.log(DebugFeature.ANIMATION, "resume");
         }
     }
 
@@ -68,6 +74,7 @@ public final class AnimatorComponent<T> {
         resetTimeline();
         state = PlaybackState.STOPPED;
         applyCurrentValue();
+        DebugLogManager.INSTANCE.log(DebugFeature.ANIMATION, "stop");
     }
 
     public void seek(long newElapsedMillis) {
@@ -77,6 +84,7 @@ public final class AnimatorComponent<T> {
         elapsedMillis = newElapsedMillis;
         syncTimelineState();
         applyCurrentValue();
+        DebugLogManager.INSTANCE.log(DebugFeature.ANIMATION, "seek=" + newElapsedMillis);
     }
 
     public T tick(long deltaMillis) {

@@ -1,6 +1,7 @@
 package com.myudog.myulib.api.framework.team.storage;
 
 import com.myudog.myulib.Myulib;
+
 import com.myudog.myulib.api.core.storage.DataStorage;
 import com.myudog.myulib.api.framework.team.TeamDefinition;
 import com.myudog.myulib.api.framework.team.TeamColor;
@@ -11,15 +12,17 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 實作 DataStorage 的 NBT 隊伍儲存庫。
- * 負責將 TeamDefinition 序列化並透過反射安全地寫入實體 NBT 檔案。
+ * NbtTeamStorage
+ * 
+ * 系統：隊伍管理系統 (Framework - Team)
+ * 角色：將隊伍定義持久化至 NBT 檔案。
+ * 類型：Storage Implementation
  */
 public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
 
@@ -27,17 +30,11 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
     private static final String TEAMS_KEY = "teams";
 
     private Path storageFile;
-
-    // 檔案鏡像快取：用於在 save/delete 單筆資料時，能快速重寫整個檔案
     private final Map<UUID, TeamDefinition> fileMirror = new ConcurrentHashMap<>();
-
-    // =====================================================================
-    // 1. DataStorage 介面實作
-    // =====================================================================
 
     @Override
     public void initialize(MinecraftServer server) {
-        Path rootPath = resolveRootPath(server).toAbsolutePath().normalize();
+        Path rootPath = NbtIoHelper.resolveRootPath(server).toAbsolutePath().normalize();
         this.storageFile = rootPath.resolve(Myulib.MOD_ID).resolve(FILE_NAME);
 
         try {
@@ -45,7 +42,7 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
                 Files.createDirectories(this.storageFile.getParent());
             }
         } catch (Exception e) {
-            System.err.println("[Myulib] 無法建立 Team 儲存目錄: " + e.getMessage());
+            Myulib.LOGGER.error("Failed to create Team storage directory: " + e.getMessage());
         }
     }
 
@@ -53,11 +50,11 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
     public Map<UUID, TeamDefinition> loadAll() {
         fileMirror.clear();
         if (storageFile == null || !Files.exists(storageFile)) {
-            return new HashMap<>(); // 檔案不存在，回傳空資料
+            return new HashMap<>();
         }
 
         try {
-            CompoundTag root = readRoot(storageFile);
+            CompoundTag root = NbtIoHelper.readRoot(storageFile);
             Tag teamsElement = root.get(TEAMS_KEY);
 
             if (teamsElement instanceof ListTag list) {
@@ -67,10 +64,9 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
                 }
             }
         } catch (Exception e) {
-            throw new IllegalStateException("無法讀取 Team NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to load Team NBT: " + storageFile, e);
         }
 
-        // 回傳鏡像的複本給 Manager
         return new HashMap<>(fileMirror);
     }
 
@@ -87,10 +83,6 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
         }
     }
 
-    // =====================================================================
-    // 2. 內部寫入邏輯與 NBT 序列化轉換
-    // =====================================================================
-
     private synchronized void saveToFile() {
         if (storageFile == null) return;
         try {
@@ -102,9 +94,9 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
             }
 
             root.put(TEAMS_KEY, list);
-            writeRoot(storageFile, root);
+            NbtIoHelper.writeRoot(storageFile, root);
         } catch (Exception e) {
-            throw new IllegalStateException("無法儲存 Team NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to save Team NBT: " + storageFile, e);
         }
     }
 
@@ -112,13 +104,14 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
         CompoundTag tag = new CompoundTag();
         tag.putString("uuid", team.uuid().toString());
         tag.putString("displayName", team.translationKey().getString());
-
         tag.putString("color", team.color().name());
         tag.putInt("playerLimit", team.playerLimit());
 
         CompoundTag flagsTag = new CompoundTag();
-        for (Map.Entry<TeamFlag, Boolean> entry : team.flags().entrySet()) {
-            flagsTag.putBoolean(entry.getKey().name(), Boolean.TRUE.equals(entry.getValue()));
+        if (team.flags() != null) {
+            for (Map.Entry<TeamFlag, Boolean> entry : team.flags().entrySet()) {
+                flagsTag.putBoolean(entry.getKey().name(), Boolean.TRUE.equals(entry.getValue()));
+            }
         }
         tag.put("flags", flagsTag);
 
@@ -130,12 +123,11 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
         UUID teamUuid;
         try {
             if (uuidStr.isBlank()) {
-                teamUuid = UUID.randomUUID(); // 或者 return null 讓上層過濾掉
+                teamUuid = UUID.randomUUID();
             } else {
                 teamUuid = UUID.fromString(uuidStr);
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("[MyuLib] 警告：發現無效的 Team UUID，已重新生成：" + uuidStr);
             teamUuid = UUID.randomUUID();
         }
 
@@ -149,10 +141,9 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
         }
 
         Map<TeamFlag, Boolean> flags = new EnumMap<>(TeamFlag.class);
-
         if (tag.contains("flags")) {
             CompoundTag flagsTag = tag.getCompound("flags").orElseThrow();
-            for (String key : keysOf(flagsTag)) {
+            for (String key : NbtIoHelper.keysOf(flagsTag)) {
                 boolean value = flagsTag.getBoolean(key).orElse(false);
                 try {
                     flags.put(TeamFlag.valueOf(key), value);
@@ -163,57 +154,5 @@ public class NbtTeamStorage implements DataStorage<UUID, TeamDefinition> {
 
         int playerLimit = Math.max(0, tag.getInt("playerLimit").orElse(0));
         return new TeamDefinition(teamUuid, displayName, color, flags, playerLimit);
-    }
-
-    // =====================================================================
-    // 3. NBT 反射底層工具 (安全實作)
-    // =====================================================================
-
-    private static CompoundTag readRoot(Path path) throws Exception {
-        return NbtIoHelper.readRoot(path);
-    }
-
-    private static void writeRoot(Path path, CompoundTag root) throws Exception {
-        NbtIoHelper.writeRoot(path, root);
-    }
-
-    private static Method findNbtIoMethod(String name, Path path) {
-        for (Method method : NbtIo.class.getMethods()) {
-            if (!method.getName().equals(name)) continue;
-            Class<?>[] params = method.getParameterTypes();
-            if (params.length == 1 && params[0].isAssignableFrom(Path.class)) return method;
-            if (params.length == 2 && (params[0].isAssignableFrom(Path.class) || params[0].isAssignableFrom(java.io.InputStream.class) || params[0].isAssignableFrom(java.io.OutputStream.class) || params[0].isAssignableFrom(CompoundTag.class))) return method;
-        }
-        return null;
-    }
-
-    private static Object[] buildNbtIoArguments(Method method, Path path, boolean reading) throws Exception {
-        Class<?>[] params = method.getParameterTypes();
-        if (params.length == 1) return new Object[]{path};
-        Object helper = createHelperArgument(params[1]);
-        if (helper == null && !params[1].isPrimitive()) helper = null;
-        if (params[0].isAssignableFrom(Path.class)) return new Object[]{path, helper};
-        if (params[0].isAssignableFrom(java.io.InputStream.class)) return new Object[]{Files.newInputStream(path), helper};
-        if (params[0].isAssignableFrom(java.io.OutputStream.class)) return new Object[]{Files.newOutputStream(path), helper};
-        return new Object[]{path, helper};
-    }
-
-    private static Object createHelperArgument(Class<?> type) {
-        try {
-            for (Method method : type.getMethods()) {
-                if (!java.lang.reflect.Modifier.isStatic(method.getModifiers()) || !type.isAssignableFrom(method.getReturnType())) continue;
-                if (method.getParameterCount() == 0) return method.invoke(null);
-            }
-            try { return type.getDeclaredConstructor().newInstance(); } catch (ReflectiveOperationException ignored) {}
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    private static List<String> keysOf(CompoundTag compound) {
-        return NbtIoHelper.keysOf(compound);
-    }
-
-    private static Path resolveRootPath(MinecraftServer server) {
-        return NbtIoHelper.resolveRootPath(server);
     }
 }

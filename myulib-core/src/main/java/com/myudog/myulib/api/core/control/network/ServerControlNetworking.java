@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.control.network;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import com.myudog.myulib.api.core.control.ControlManager;
 import com.myudog.myulib.api.core.control.Intent;
 import com.myudog.myulib.api.core.control.IPlayerController;
@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.jspecify.annotations.NonNull;
 
 public final class ServerControlNetworking {
-    public static final Identifier CONTROL_STATE_CHANNEL = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "control_state");
+    public static final Identifier CONTROL_STATE_CHANNEL = Identifier.fromNamespaceAndPath(MyulibCore.MOD_ID, "control_state");
 
     private static boolean payloadsRegistered;
     private static boolean receiversRegistered;
@@ -23,7 +23,7 @@ public final class ServerControlNetworking {
     private ServerControlNetworking() {
     }
 
-    public record ControlStatePayload(int disabledMask, boolean controlling, boolean controlled) implements CustomPacketPayload {
+    public record ControlStatePayload(java.util.BitSet disabledMask, boolean controlling, boolean controlled) implements CustomPacketPayload {
         public static final Type<ControlStatePayload> TYPE = new Type<>(CONTROL_STATE_CHANNEL);
         public static final StreamCodec<RegistryFriendlyByteBuf, ControlStatePayload> CODEC =
                 StreamCodec.of(ControlStatePayload::encode, ControlStatePayload::decode);
@@ -34,11 +34,11 @@ public final class ServerControlNetworking {
         }
 
         private static ControlStatePayload decode(RegistryFriendlyByteBuf buf) {
-            return new ControlStatePayload(buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
+            return new ControlStatePayload(buf.readBitSet(), buf.readBoolean(), buf.readBoolean());
         }
 
         private static void encode(RegistryFriendlyByteBuf buf, ControlStatePayload payload) {
-            buf.writeVarInt(payload.disabledMask);
+            buf.writeBitSet(payload.disabledMask);
             buf.writeBoolean(payload.controlling);
             buf.writeBoolean(payload.controlled);
         }
@@ -100,7 +100,7 @@ public final class ServerControlNetworking {
                 }));
     }
 
-    public static void syncControlState(ServerPlayer player, int disabledMask, boolean controlling, boolean controlled) {
+    public static void syncControlState(ServerPlayer player, java.util.BitSet disabledMask, boolean controlling, boolean controlled) {
         if (player == null) {
             return;
         }

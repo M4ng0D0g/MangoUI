@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -38,7 +39,6 @@ public abstract class MixinLivingEntityControl implements
     @Shadow protected boolean jumping;
     @Shadow public abstract void setYHeadRot(float yHeadRot);
     @Shadow public float yBodyRot;
-    @Shadow public abstract void setShiftKeyDown(boolean sneaking);
     @Shadow public abstract void setSprinting(boolean sprinting);
     @Shadow public abstract void swing(InteractionHand hand);
 
@@ -60,23 +60,23 @@ public abstract class MixinLivingEntityControl implements
     // ── IControllableRotatable 實作 ───────────────────────────────────────
 
     @Override
-    public void updateRotation(float yaw, float pitch) {
+    public void myulib_mc$updateRotation(float yaw, float pitch) {
         this.rotationIntent = new Vec3(yaw, pitch, 0);
     }
 
     @Override
-    public boolean shouldSyncRotation() {
+    public boolean myulib_mc$shouldSyncRotation() {
         return true;
     }
 
     // ── IControllableActionable 實作 ───────────────────────────────────────
 
     @Override
-    public void executeAction(Intent intent) {
-        boolean pressed = intent.action() == InputAction.PRESS;
+    public void myulib_mc$executeAction(Intent intent) {
+        boolean pressed = intent.action() == InputAction.PRESS || intent.action() == InputAction.REPEAT;
         switch (intent.type()) {
             case JUMP -> this.jumping = pressed;
-            case SNEAK -> this.setShiftKeyDown(pressed);
+            case SNEAK -> ((net.minecraft.world.entity.Entity) (Object) this).setShiftKeyDown(pressed);
             case SPRINT -> this.setSprinting(pressed);
         }
     }
@@ -84,7 +84,7 @@ public abstract class MixinLivingEntityControl implements
     // ── IControllableInteractable 實作 ─────────────────────────────────────
 
     @Override
-    public void executeInteract(Intent intent) {
+    public void myulib_mc$executeInteract(Intent intent) {
         if (intent.action() == InputAction.PRESS) {
             this.swing(InteractionHand.MAIN_HAND);
         }
@@ -105,6 +105,10 @@ public abstract class MixinLivingEntityControl implements
     @Inject(method = "aiStep", at = @At("HEAD"), cancellable = true)
     private void myulib_mc$overrideAiAndMovement(CallbackInfo ci) {
         if (!ControlManager.INSTANCE.isControlledTarget(selfUuid())) return;
+
+        if (((Object) this) instanceof Player) {
+            System.out.println("[MyuLib 警告] 玩家 " + selfUuid() + " 正被 ControlManager 強制控制！這會導致 WASD 失效。");
+        }
 
         // 1. 視角旋轉控制
         if (rotationIntent != null) {

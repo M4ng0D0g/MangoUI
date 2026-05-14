@@ -93,7 +93,7 @@ public final class CameraTrackingTarget {
      * 根據當前世界即時解析出目標的絕對座標。
      * 客戶端應在每一幀呼叫此方法以實現平滑追蹤。
      */
-    public Vec3 resolvePosition(Level level) {
+    public Vec3 resolvePosition(Level level, float partialTicks) {
         Vec3 basePos = null;
 
         if (staticPosition != null) {
@@ -101,12 +101,12 @@ public final class CameraTrackingTarget {
         } else if (entityId != null && level != null) {
             Entity entity = level.getEntity(entityId);
             if (entity != null) {
-                basePos = entity.position();
+                basePos = entity.getPosition(partialTicks);
             }
         }
 
         if (basePos == null) {
-            return offset;
+            return null;
         }
         return basePos.add(offset);
     }
@@ -115,14 +115,14 @@ public final class CameraTrackingTarget {
      * 即時解析出注視點 (LookAt) 座標。
      */
     @Nullable
-    public Vec3 resolveLookAt(Level level) {
+    public Vec3 resolveLookAt(Level level, float partialTicks) {
         if (staticLookAt != null) {
             return staticLookAt;
         } else if (lookAtEntityId != null && level != null) {
             Entity entity = level.getEntity(lookAtEntityId);
             if (entity != null) {
-                // 注視實體的中心位置 (重心) 而非腳底
-                return entity.position().add(0, entity.getBbHeight() / 2.0, 0);
+                // 注視實體的中心位置 (重心) 而非腳底，並進行平滑插值
+                return entity.getPosition(partialTicks).add(0, entity.getBbHeight() / 2.0, 0);
             }
         }
         return null;

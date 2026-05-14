@@ -1,7 +1,7 @@
 package com.myudog.myulib.client.mixin.client.camera;
 
 import com.myudog.myulib.api.core.camera.CameraPerspective;
-import com.myudog.myulib.internal.camera.ClientCameraManager;
+import com.myudog.myulib.client.api.camera.ClientCameraManager;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Options;
 import org.spongepowered.asm.mixin.Mixin;

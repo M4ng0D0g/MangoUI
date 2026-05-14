@@ -1,11 +1,12 @@
 package com.myudog.myulib.api.framework.command;
 
+import com.myudog.myulib.Myulib;
+
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.core.control.ControlManager;
 import com.myudog.myulib.api.core.control.ControlType;
 import com.myudog.myulib.api.core.debug.DebugFeature;
@@ -53,6 +54,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * AccessCommandService
+ *
+ * 蝟餌絞嚗?隞文??頂蝯?(Framework - Command)
+ * 閫嚗?隞日脣暺?鞎痊撠??嗥?????踝?甈???隡?啜??蝑?????Minecraft 隡箸??冽?隞扎?
+ * 憿?嚗ervice / Command Handler
+ *
+ * 甇斗??????憟?隞方酉???塚?
+ * 1. ?折??{@link CommandRegistry}嚗?潭??嗅?函??摩?澆???????
+ * 2. Minecraft ??Brigadier 蝟餌絞嚗?潭?靘策?拙振?恣?雿輻???脣?誘嚗?myulib ...嚗?
+ */
 public class AccessCommandService {
     public static final String COMMAND_PREFIX = Myulib.MOD_ID + ":";
     private static final Set<UUID> TRACKED_TIMERS = new LinkedHashSet<>();
@@ -129,7 +141,7 @@ public class AccessCommandService {
         registerPermissionCrud(dispatcher);
         registerRoleGroupCrud(dispatcher);
         registerTeamCrud(dispatcher);
-        // registerGameCrud(dispatcher); // TODO: Reimplement with new GameManager API
+        registerGameCrud(dispatcher);
         registerTimerCrud(dispatcher);
         registerControlCrud(dispatcher);
         registerDebugCommands(dispatcher);
@@ -827,7 +839,121 @@ public class AccessCommandService {
                         .executes(context -> reply(context.getSource(), "team=count:" + TeamManager.INSTANCE.all().size()))));
     }
 
-    // registerGameCrud has been removed - needs reimplementation with new GameManager API
+    private static void registerGameCrud(CommandDispatcher<CommandSourceStack> dispatcher) {
+        var root = Commands.literal(COMMAND_PREFIX + "game")
+                .requires(source -> source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.GAMEMASTERS)));
+
+        // /myulib game create <definition> <instanceId>
+        root.then(Commands.literal("create")
+                .then(Commands.argument("definition", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameDefinitionSuggestions(), builder))
+                        .then(Commands.argument("instanceId", StringArgumentType.word())
+                                .executes(context -> {
+                                    Identifier defId = Identifier.parse(StringArgumentType.getString(context, "definition"));
+                                    String instanceId = StringArgumentType.getString(context, "instanceId");
+                                    GameManager.INSTANCE.createInstance(defId, instanceId, context.getSource().getLevel());
+                                    return reply(context.getSource(), "game=created:" + instanceId);
+                                }))));
+
+        // /myulib game config <instanceId> <variable> <value>
+        root.then(Commands.literal("config")
+                .then(Commands.argument("instanceId", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                        .then(Commands.argument("variable", StringArgumentType.word())
+                                .suggests((context, builder) -> {
+                                    String instanceId = StringArgumentType.getString(context, "instanceId");
+                                    var instance = GameManager.INSTANCE.getInstance(instanceId);
+                                    if (instance != null) {
+                                        return SharedSuggestionProvider.suggest(instance.getConfig().getVariables().keySet(), builder);
+                                    }
+                                    return builder.buildFuture();
+                                })
+                                .then(Commands.argument("value", StringArgumentType.greedyString())
+                                        .executes(context -> {
+                                            String instanceId = StringArgumentType.getString(context, "instanceId");
+                                            String variable = StringArgumentType.getString(context, "variable");
+                                            String value = StringArgumentType.getString(context, "value");
+                                            var instance = GameManager.INSTANCE.getInstance(instanceId);
+                                            if (instance == null) return reply(context.getSource(), "game=not_found");
+                                            instance.getConfig().setVariable(variable, value);
+                                            return reply(context.getSource(), "game=config:" + instanceId + "," + variable + "=" + value);
+                                        })))));
+
+        // /myulib game init <instanceId>
+        root.then(Commands.literal("init")
+                .then(Commands.argument("instanceId", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                        .executes(context -> {
+                            String instanceId = StringArgumentType.getString(context, "instanceId");
+                            boolean success = GameManager.INSTANCE.initInstance(instanceId);
+                            return reply(context.getSource(), success ? "game=initialized:" + instanceId : "game=init_failed");
+                        })));
+
+        // /myulib game join <player> <instanceId>
+        root.then(Commands.literal("join")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.argument("instanceId", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                                .executes(context -> {
+                                    ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                                    String instanceId = StringArgumentType.getString(context, "instanceId");
+                                    boolean success = GameManager.INSTANCE.joinPlayer(instanceId, player.getUUID(), null);
+                                    return reply(context.getSource(), success ? "game=joined:" + instanceId : "game=join_failed");
+                                }))));
+
+        // /myulib game leave <player> <instanceId>
+        root.then(Commands.literal("leave")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.argument("instanceId", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                                .executes(context -> {
+                                    ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                                    String instanceId = StringArgumentType.getString(context, "instanceId");
+                                    GameManager.INSTANCE.leavePlayer(instanceId, player.getUUID());
+                                    return reply(context.getSource(), "game=left:" + instanceId);
+                                }))));
+
+        // /myulib game leave_all <player>
+        root.then(Commands.literal("leave_all")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(context -> {
+                            ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                            GameManager.INSTANCE.leaveAllInstances(player.getUUID());
+                            return reply(context.getSource(), "game=left_all");
+                        })));
+
+        // /myulib game start <instanceId>
+        root.then(Commands.literal("start")
+                .then(Commands.argument("instanceId", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                        .executes(context -> {
+                            String instanceId = StringArgumentType.getString(context, "instanceId");
+                            boolean success = GameManager.INSTANCE.startInstance(instanceId);
+                            return reply(context.getSource(), success ? "game=started:" + instanceId : "game=start_failed");
+                        })));
+
+        // /myulib game shutdown <instanceId>
+        root.then(Commands.literal("shutdown")
+                .then(Commands.argument("instanceId", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                        .executes(context -> {
+                            String instanceId = StringArgumentType.getString(context, "instanceId");
+                            boolean success = GameManager.INSTANCE.shutdownInstance(instanceId);
+                            return reply(context.getSource(), success ? "game=shutdown:" + instanceId : "game=shutdown_failed");
+                        })));
+
+        // /myulib game delete <instanceId>
+        root.then(Commands.literal("delete")
+                .then(Commands.argument("instanceId", StringArgumentType.word())
+                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(gameInstanceSuggestions(), builder))
+                        .executes(context -> {
+                            String instanceId = StringArgumentType.getString(context, "instanceId");
+                            boolean success = GameManager.INSTANCE.deleteInstance(instanceId);
+                            return reply(context.getSource(), success ? "game=deleted:" + instanceId : "game=delete_failed");
+                        })));
+
+        dispatcher.register(root);
+    }
     
     private static void registerTimerCrud(CommandDispatcher<CommandSourceStack> dispatcher) {
         var root = Commands.literal(COMMAND_PREFIX + "timer")
@@ -1092,7 +1218,7 @@ public class AccessCommandService {
     }
 
     private static Identifier fieldDimensionOf(Identifier fieldId) {
-        var field = fieldId == null ? null : FieldManager.INSTANCE.get(fieldId);
+        com.myudog.myulib.api.framework.field.FieldDefinition field = fieldId == null ? null : FieldManager.INSTANCE.get(fieldId);
         return field == null ? null : field.dimensionId();
     }
 
@@ -1253,8 +1379,12 @@ public class AccessCommandService {
         return null;
     }
 
+    private static List<String> gameDefinitionSuggestions() {
+        return GameManager.INSTANCE.getDefinitions().stream().map(d -> d.id().toString()).toList();
+    }
+
     private static List<String> gameInstanceSuggestions() {
-        return List.of();
+        return GameManager.INSTANCE.getInstances().stream().map(GameInstance::getInstanceId).toList();
     }
 
     private static String renderFlattenedPlayerPermissions(String playerName, java.util.UUID playerId, List<String> groups, Identifier fieldId, Identifier dimensionId) {

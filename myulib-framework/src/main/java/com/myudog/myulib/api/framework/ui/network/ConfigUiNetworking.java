@@ -1,10 +1,11 @@
 package com.myudog.myulib.api.framework.ui.network;
 
+import com.myudog.myulib.Myulib;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.framework.field.FieldDefinition;
 import com.myudog.myulib.api.framework.field.FieldManager;
 import com.myudog.myulib.api.framework.permission.PermissionAction;

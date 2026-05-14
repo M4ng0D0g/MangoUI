@@ -61,8 +61,17 @@
 
 ---
 
-## 已測試功能
-- [x] 雙向 UUID 綁定關係管理
-- [x] 伺服器權限位元遮罩同步
-- [x] 客戶端物理按鍵攔截與歸零
-- [x] 意圖指令 (Intent) 的跨維度派發
+## 指令介面
+
+### 控制綁定
+`/myulib control bind <source> <target>`
+`/myulib control unbind <source> <target>`
+`/myulib control unbind_sources`
+`/myulib control unbind_targets`
+
+### 控制權限
+如果 allow/deny 會發送封包給該 client 當有對應 intent 直接本地攔截
+
+`/myulib control list <player>`
+`/myulib control allow <player> <intent>`
+`/myulib control deny <player> <intent>`

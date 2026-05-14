@@ -1,7 +1,7 @@
 package com.myudog.myulib.client.api.field;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibFramework;
 import com.myudog.myulib.api.core.hologram.HologramDefinition;
 import com.myudog.myulib.api.core.hologram.HologramStyle;
 import com.myudog.myulib.api.core.hologram.network.HologramNetworking;
@@ -21,7 +21,7 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.Modifier;
 
 public final class FieldVisualizationClientRenderer {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Myulib.MOD_ID);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyulibFramework.MOD_ID);
     private static final List<HologramDefinition> ACTIVE_ENTRIES = new ArrayList<>();
     private static volatile boolean installed;
 

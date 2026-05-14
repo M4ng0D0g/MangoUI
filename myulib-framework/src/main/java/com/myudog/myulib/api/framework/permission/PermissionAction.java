@@ -1,31 +1,31 @@
 package com.myudog.myulib.api.framework.permission;
 
 public enum PermissionAction {
-    // --- 方塊與環境 ---
-    BLOCK_PLACE,         // 放置方塊
-    BLOCK_BREAK,         // 破壞方塊
-    INTERACT_BLOCK,      // 互動方塊 (開門、按按鈕)
-    USE_BUCKET,          // 🪣 新增：使用水桶/岩漿桶 (防倒岩漿破壞)
-    IGNITE_BLOCK,        // 🔥 新增：點火 (打火石、火焰彈)
-    TRAMPLE_FARMLAND,    // 🌾 新增：踩壞農田
+    // --- ?孵??憓?---
+    BLOCK_PLACE,         // ?曄蔭?孵?
+    BLOCK_BREAK,         // ?游??孵?
+    INTERACT_BLOCK,      // 鈭??孵? (??????)
+    USE_BUCKET,          // ?炒 ?啣?嚗蝙?冽偌獢?撗拇撚獢?(?脣痔瞍輻憯?
+    IGNITE_BLOCK,        // ? ?啣?嚗???(??喋?啣?)
+    TRAMPLE_FARMLAND,    // ? ?啣?嚗萱憯噙??
 
-    // --- 實體與戰鬥 ---
-    ATTACK_PLAYER,       // 攻擊玩家 (PVP)
-    ATTACK_FRIENDLY_MOB, // 攻擊友善生物 (村民、動物)
-    ATTACK_HOSTILE_MOB,  // 攻擊敵對生物 (殭屍、苦力怕)
-    INTERACT_ENTITY,     // 互動實體 (跟村民交易、騎馬)
-    RIDE_ENTITY,         // 🐎 新增：騎乘實體 (礦車、船、馬)
-    USE_SPAWN_EGG,       // 🥚 新增：使用生怪蛋
-    ARMOR_STAND_MANIPULATE, // 🧍 新增：操作盔甲架 (防偷裝備)
+    // --- 撖阡??擛?---
+    ATTACK_PLAYER,       // ?餅??拙振 (PVP)
+    ATTACK_FRIENDLY_MOB, // ?餅???? (??????
+    ATTACK_HOSTILE_MOB,  // ?餅??萄?? (畾剖????
+    INTERACT_ENTITY,     // 鈭?撖阡? (頝?瘞漱??擐?
+    RIDE_ENTITY,         // ?? ?啣?嚗?銋祕擃?(蝷西???收)
+    USE_SPAWN_EGG,       // ?? ?啣?嚗蝙?函??芾?
+    ARMOR_STAND_MANIPULATE, // ?? ?啣?嚗?雿??脫 (?脣鋆?)
 
-    // --- 物品與系統 ---
-    USE_PROJECTILE,      // 發射投射物 (丟雪球、射箭)
-    USE_ITEM,            // 使用物品 (吃食物、喝藥水)
-    DROP_ITEM,           // 丟棄物品
-    PICKUP_ITEM,         // 🎒 新增：撿起物品
-    INVENTORY_MOVE,      // 移動物品欄、交換主副手
-    OPEN_CONTAINER,      // 📦 新增：打開容器 (箱子、漏斗) - 從 INTERACT_BLOCK 獨立出來更安全
-    TRIGGER_REDSTONE,    // 觸發紅石
-    USE_PORTAL,          // 使用傳送門
-    SEND_MESSAGE         // 發送訊息
+    // --- ?拙??頂蝯?---
+    USE_PROJECTILE,      // ?澆?????(銝??蝞?
+    USE_ITEM,            // 雿輻?拙? (???押??交偌)
+    DROP_ITEM,           // 銝??拙?
+    PICKUP_ITEM,         // ?? ?啣?嚗韏瑞??
+    INVENTORY_MOVE,      // 蝘餃??拙?甈漱?蜓?舀?
+    OPEN_CONTAINER,      // ? ?啣?嚗??捆??(蝞勗????? - 敺?INTERACT_BLOCK ?函??箔??游???
+    TRIGGER_REDSTONE,    // 閫貊蝝
+    USE_PORTAL,          // 雿輻?喲?
+    SEND_MESSAGE         // ?潮???
 }

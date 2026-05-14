@@ -2,6 +2,8 @@ package com.myudog.myulib.api.core.effect;
 
 import com.myudog.myulib.api.core.effect.component.SpatialEffectComponent;
 import com.myudog.myulib.api.core.ecs.EcsContainer;
+import com.myudog.myulib.api.core.debug.DebugFeature;
+import com.myudog.myulib.api.core.debug.DebugLogManager;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
@@ -65,6 +67,8 @@ public final class SpatialEffectManager implements ISpatialEffectManager {
         Holder<MobEffect> effectHolder = BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect.vanillaEffect());
         definitions.put(effectHolder, effect);
         addEffectSource(player, effect.vanillaEffect(), effect.amplifier());
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT,
+                "add effect player=" + player.getName().getString() + ",effect=" + BuiltInRegistries.MOB_EFFECT.getKey(effect.vanillaEffect()));
     }
 
     /**
@@ -94,6 +98,8 @@ public final class SpatialEffectManager implements ISpatialEffectManager {
     @Override
     public void removeEffectSource(ServerPlayer player, SpatialEffect effect) {
         removeEffectSource(player, effect.vanillaEffect());
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT,
+                "remove effect player=" + player.getName().getString() + ",effect=" + BuiltInRegistries.MOB_EFFECT.getKey(effect.vanillaEffect()));
     }
 
     /**
@@ -112,6 +118,8 @@ public final class SpatialEffectManager implements ISpatialEffectManager {
             }
             ecs.destroyEntity(ecsId);
         }
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT,
+                "clear player=" + player.getName().getString());
     }
 
     @Override

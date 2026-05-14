@@ -1,6 +1,8 @@
 package com.myudog.myulib.api;
 
 import com.myudog.myulib.api.core.dsl.EffectBuilder;
+import com.myudog.myulib.api.core.debug.DebugFeature;
+import com.myudog.myulib.api.core.debug.DebugLogManager;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
@@ -14,6 +16,7 @@ public final class MyuVFXManager {
     }
 
     public void spawnSpiral(ServerLevel Level, Vec3 center, ParticleOptions particle) {
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT, "vfx spiral center=" + center);
         EffectBuilder.spawnEffect(center, builder -> {
             builder.duration(40);
             builder.onTick(tick -> {
@@ -28,6 +31,7 @@ public final class MyuVFXManager {
     }
 
     public void spawnShockwave(ServerLevel Level, Vec3 center, ParticleOptions particle) {
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT, "vfx shockwave center=" + center);
         EffectBuilder.spawnEffect(center, builder -> {
             builder.duration(15);
             builder.onTick(tick -> {

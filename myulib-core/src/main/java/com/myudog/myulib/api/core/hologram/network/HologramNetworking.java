@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.hologram.network;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import com.myudog.myulib.api.core.hologram.HologramDefinition;
 import com.myudog.myulib.api.core.hologram.HologramStyle;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class HologramNetworking {
-    public static final Identifier CHANNEL = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "hologram_sync");
+    public static final Identifier CHANNEL = Identifier.fromNamespaceAndPath(MyulibCore.MOD_ID, "hologram_sync");
 
     public record HologramPayload(List<HologramDefinition> entries) implements CustomPacketPayload {
         public static final Type<HologramPayload> TYPE = new Type<>(CHANNEL);

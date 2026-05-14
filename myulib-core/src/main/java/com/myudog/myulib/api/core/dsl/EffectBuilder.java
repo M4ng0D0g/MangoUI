@@ -1,6 +1,8 @@
 package com.myudog.myulib.api.core.dsl;
 import com.myudog.myulib.api.Shapes;
 import com.myudog.myulib.api.core.color.ColorProvider;
+import com.myudog.myulib.api.core.debug.DebugFeature;
+import com.myudog.myulib.api.core.debug.DebugLogManager;
 import com.myudog.myulib.api.core.dynamics.IForceField;
 import com.myudog.myulib.api.core.floating.IFloatingObject;
 import com.myudog.myulib.api.core.shape.IShape;
@@ -138,5 +140,6 @@ public final class EffectBuilder {
         EffectBuilder builder = new EffectBuilder(center);
         setup.accept(builder);
         builder.build();
+        DebugLogManager.INSTANCE.log(DebugFeature.EFFECT, "spawn effect center=" + center);
     }
 }

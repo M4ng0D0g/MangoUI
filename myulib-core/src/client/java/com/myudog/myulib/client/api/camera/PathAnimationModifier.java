@@ -34,7 +34,7 @@ final class PathAnimationModifier implements CameraModifier {
         Level level = Minecraft.getInstance().level;
 
         // 🌟 修正重點 2：將 level 傳入以進行「動態實體座標解析」
-        Vec3 to = target.resolvePosition(level);
+        Vec3 to = target.resolvePosition(level, tickDelta);
 
         double x = start.x + (to.x - start.x) * eased;
         double y = start.y + (to.y - start.y) * eased;
@@ -42,7 +42,7 @@ final class PathAnimationModifier implements CameraModifier {
         transform.setPosition(x, y, z);
 
         // 🌟 修正重點 3：將 level 傳入以進行「動態注視點解析」
-        Vec3 lookAt = target.resolveLookAt(level);
+        Vec3 lookAt = target.resolveLookAt(level, tickDelta);
         if (lookAt != null) {
             Vec3 forward = lookAt.subtract(transform.position());
             double horizontal = Math.sqrt(forward.x * forward.x + forward.z * forward.z);

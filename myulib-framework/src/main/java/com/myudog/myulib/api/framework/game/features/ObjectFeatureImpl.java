@@ -19,7 +19,7 @@ public class ObjectFeatureImpl implements ObjectFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ObjectFeatureImpl.class.getName());
 
-    // 🌟 必須使用 ConcurrentHashMap，確保多執行緒下遊戲事件與 Tick 更新的安全性
+    // ?? 敹?雿輻 ConcurrentHashMap嚗Ⅱ靽??瑁?蝺??鈭辣??Tick ?湔???冽?
     private final Map<Identifier, IObjectRt> runtimeObjects = new ConcurrentHashMap<>();
 
     @Override
@@ -38,36 +38,36 @@ public class ObjectFeatureImpl implements ObjectFeature {
     }
 
     /**
-     * 🌟 核心生成邏輯：透過藍圖生成實體
-     * @param instance 當前的遊戲實例 (提供世界與上下文)
-     * @param defId    藍圖的 ID (對應 ObjectManager 中的 ObjectDef)
-     * @param instanceId 這個 Runtime 物件的唯一識別碼 (例如 "zombie_spawner_1")
-     * @return 生成的 Runtime 物件
+     * ?? ?詨????摩嚗?????撖阡?
+     * @param instance ?嗅????脣祕靘?(??銝???銝?)
+     * @param defId    ????ID (撠? ObjectManager 銝剔? ObjectDef)
+     * @param instanceId ??Runtime ?拐辣?銝霅蝣?(靘? "zombie_spawner_1")
+     * @return ????Runtime ?拐辣
      */
     @Override
     public IObjectRt spawnObject(GameInstance<?, ?, ?> instance, Identifier defId, Identifier instanceId) {
-        // 1. 從全域管理器獲取藍圖
+        // 1. 敺?恣??脣???
         IObjectDef def = ObjectManager.INSTANCE.getDefinition(defId);
         if (def == null) {
-            throw new IllegalArgumentException("無法生成物件，找不到對應的 ObjectDef: " + defId);
+            throw new IllegalArgumentException("?⊥????拐辣嚗銝撠???ObjectDef: " + defId);
         }
 
-        // 2. 呼叫藍圖的工廠方法 (不再需要傳入 instance)
+        // 2. ?澆???極撱瘜?(銝??閬??instance)
         IObjectRt rtObj = def.spawn();
 
-        // 3. 初始化並生成實例
+        // 3. ???蒂??撖虫?
         rtObj.onInitialize();
         rtObj.spawn();
 
-        // 4. 儲存至本地追蹤器
+        // 4. ?脣??單?啗蕭頩文
         this.runtimeObjects.put(instanceId, rtObj);
 
         return rtObj;
     }
 
     /**
-     * 🌟 核心清理邏輯：對應 GameData 卸載時的回收
-     * 負責呼叫所有 Runtime 物件的 destroy，以移除 Minecraft 實體或還原方塊。
+     * ?? ?詨?皜??摩嚗???GameData ?貉????
+     * 鞎痊?澆???Runtime ?拐辣??destroy嚗誑蝘駁 Minecraft 撖阡????憛?
      */
     @Override
     public void clean(GameInstance<?, ?, ?> instance) {
@@ -75,7 +75,7 @@ public class ObjectFeatureImpl implements ObjectFeature {
             try {
                 entry.getValue().destroy();
             } catch (Exception e) {
-                LOGGER.error("銷毀 Runtime 物件時發生錯誤: {}", entry.getKey(), e);
+                LOGGER.error("?瑟? Runtime ?拐辣??隤? {}", entry.getKey(), e);
             }
         }
         this.runtimeObjects.clear();

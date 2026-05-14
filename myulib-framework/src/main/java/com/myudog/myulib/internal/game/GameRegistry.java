@@ -13,15 +13,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GameRegistry {
-    // 遊戲藍圖註冊表 (採用 LinkedHashMap 維持註冊順序)
+    // 遊戲定義註冊表
     private final Map<Identifier, GameDefinition<?, ?, ?>> definitions = new LinkedHashMap<>();
 
-    // 運行中的實例 (執行緒安全)
-    private final Map<UUID, GameInstance<?, ?, ?>> instances = new ConcurrentHashMap<>();
+    // 運行中的實例 (ID -> Instance)
+    private final Map<String, GameInstance<?, ?, ?>> instances = new ConcurrentHashMap<>();
 
-    // 實體與實例的反向索引 (UUID -> Instance ID)
-    private final Map<UUID, UUID> playerToInstanceMap = new ConcurrentHashMap<>();
-    private final Map<UUID, UUID> entityToInstanceMap = new ConcurrentHashMap<>();
+    // 映射管理 (UUID -> Instance ID)
+    private final Map<UUID, String> playerToInstanceMap = new ConcurrentHashMap<>();
+    private final Map<UUID, String> entityToInstanceMap = new ConcurrentHashMap<>();
 
     // --- Definition 管理 ---
 
@@ -30,38 +30,38 @@ public class GameRegistry {
     }
 
     @Nullable
-    public GameDefinition<?, ?, ?> getDefinition(@NotNull UUID id) {
+    public GameDefinition<?, ?, ?> getDefinition(@NotNull Identifier id) {
         return definitions.get(id);
     }
+
     // --- Instance 管理 ---
 
     public void addInstance(@NotNull GameInstance<?, ?, ?> instance) {
-        instances.put(instance.getUuid(), instance);
+        instances.put(instance.getInstanceId(), instance);
     }
 
     @Nullable
-    public GameInstance<?, ?, ?> removeInstance(@NotNull UUID uuid) {
-        return instances.remove(uuid);
+    public GameInstance<?, ?, ?> removeInstance(@NotNull String instanceId) {
+        return instances.remove(instanceId);
     }
 
     @Nullable
-    public GameInstance<?, ?, ?> getInstance(@NotNull UUID uuid) {
-        return instances.get(uuid);
+    public GameInstance<?, ?, ?> getInstance(@NotNull String instanceId) {
+        return instances.get(instanceId);
     }
 
-    public Collection<GameInstance<?, ?, ?>> getAllInstances() {
+    public Collection<GameInstance<?, ?, ?>> instances() {
         return instances.values();
     }
 
-    // --- Entity 映射管理 ---
+    // --- 映射管理 ---
 
-    public void linkPlayer(@NotNull UUID uuid, @NotNull UUID instanceUuid) {
-        playerToInstanceMap.put(uuid, instanceUuid);
+    public void linkPlayer(@NotNull UUID uuid, @NotNull String instanceId) {
+        playerToInstanceMap.put(uuid, instanceId);
     }
 
-
-    public void linkEntity(@NotNull UUID entityUuid, @NotNull UUID instanceUuid) {
-        entityToInstanceMap.put(entityUuid, instanceUuid);
+    public void linkEntity(@NotNull UUID entityUuid, @NotNull String instanceId) {
+        entityToInstanceMap.put(entityUuid, instanceId);
     }
 
     public void unlinkPlayer(@NotNull UUID uuid) {
@@ -74,32 +74,25 @@ public class GameRegistry {
 
     @Nullable
     public GameInstance<?, ?, ?> getInstanceByPlayer(UUID uuid) {
-        UUID id = playerToInstanceMap.get(uuid);
+        String id = playerToInstanceMap.get(uuid);
         return id != null ? instances.get(id) : null;
     }
 
     @Nullable
     public GameInstance<?, ?, ?> getInstanceByEntity(@NotNull UUID entityUuid) {
-        UUID instanceId = entityToInstanceMap.get(entityUuid);
+        String instanceId = entityToInstanceMap.get(entityUuid);
         return instanceId != null ? instances.get(instanceId) : null;
     }
 
-    public void unassignPlayersInInstance(@NotNull UUID instanceUuid) {
-        playerToInstanceMap.entrySet().removeIf(entry -> entry.getValue().equals(instanceUuid));
+    public void clearMappingsForInstance(@NotNull String instanceId) {
+        playerToInstanceMap.entrySet().removeIf(entry -> entry.getValue().equals(instanceId));
+        entityToInstanceMap.entrySet().removeIf(entry -> entry.getValue().equals(instanceId));
     }
 
-    public void unassignEntitiesInInstance(@NotNull UUID instanceUuid) {
-        entityToInstanceMap.entrySet().removeIf(entry -> entry.getValue().equals(instanceUuid));
-    }
-
-
-    public void clearMappingsForInstance(@NotNull UUID instanceUuid) {
-        unassignPlayersInInstance(instanceUuid);
-        unassignEntitiesInInstance(instanceUuid);
-    }
-
-    public Collection<GameInstance<?, ?, ?>> instances() {
-        return instances.values();
+    public void clearAll() {
+        instances.clear();
+        playerToInstanceMap.clear();
+        entityToInstanceMap.clear();
     }
 
     public Collection<GameDefinition<?, ?, ?>> definitions() {

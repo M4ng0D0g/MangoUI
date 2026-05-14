@@ -4,12 +4,13 @@ import com.myudog.myulib.api.core.control.InputAction;
 import com.myudog.myulib.api.core.control.Intent;
 import com.myudog.myulib.api.core.control.IntentType;
 import com.myudog.myulib.client.api.control.ClientControlManager;
-import com.myudog.myulib.internal.camera.ClientCameraManager;
+import com.myudog.myulib.client.api.camera.ClientCameraManager;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -52,13 +53,25 @@ public class KeyboardMixin {
         }
     }
 
+    @Unique
     private IntentType mapKeyToIntent(int key) {
         Minecraft mc = Minecraft.getInstance();
         if (key == mc.options.keyJump.getDefaultKey().getValue()) return IntentType.JUMP;
         if (key == mc.options.keyShift.getDefaultKey().getValue()) return IntentType.SNEAK;
         if (key == mc.options.keySprint.getDefaultKey().getValue()) return IntentType.SPRINT;
-        
-        // 也可以擴充其他按鍵，或者發送 GENERIC_ACTION
-        return null;
+
+        // F-Keys
+        if (key >= GLFW.GLFW_KEY_F1 && key <= GLFW.GLFW_KEY_F12) {
+            return IntentType.valueOf("F" + (key - GLFW.GLFW_KEY_F1 + 1));
+        }
+
+        // Standard Keys
+        return switch (key) {
+            case GLFW.GLFW_KEY_ESCAPE -> IntentType.ESCAPE;
+            case GLFW.GLFW_KEY_TAB -> IntentType.TAB;
+            case GLFW.GLFW_KEY_ENTER -> IntentType.ENTER;
+            case GLFW.GLFW_KEY_BACKSPACE -> IntentType.BACKSPACE;
+            default -> null;
+        };
     }
 }

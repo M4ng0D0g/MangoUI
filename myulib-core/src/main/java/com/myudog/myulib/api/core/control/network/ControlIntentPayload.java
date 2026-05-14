@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.control.network;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import com.myudog.myulib.api.core.control.InputAction;
 import com.myudog.myulib.api.core.control.IntentType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -23,7 +23,7 @@ public record ControlIntentPayload(
         String customAction,
         long timestamp
 ) implements CustomPacketPayload {
-    public static final Identifier ID = Identifier.fromNamespaceAndPath(Myulib.MOD_ID, "control_intent");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(MyulibCore.MOD_ID, "control_intent");
     public static final Type<ControlIntentPayload> TYPE = new Type<>(ID);
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ControlIntentPayload> CODEC = StreamCodec.of(

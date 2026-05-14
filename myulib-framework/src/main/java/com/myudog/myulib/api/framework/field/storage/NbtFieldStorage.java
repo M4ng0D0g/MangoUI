@@ -1,6 +1,7 @@
 package com.myudog.myulib.api.framework.field.storage;
 
 import com.myudog.myulib.Myulib;
+
 import com.myudog.myulib.api.framework.field.FieldDefinition;
 import com.myudog.myulib.api.core.storage.DataStorage;
 import com.myudog.myulib.api.core.util.NbtIoHelper;
@@ -14,10 +15,16 @@ import net.minecraft.world.phys.AABB;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * NbtFieldStorage
+ * 
+ * 系統：場地管理系統 (Framework - Field)
+ * 角色：將場地定義持久化至 NBT 檔案。
+ * 類型：Storage Implementation
+ */
 public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
     private static final String FILE_NAME = "fields.dat";
     private static final String FIELDS_KEY = "fields";
@@ -27,16 +34,14 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
 
     @Override
     public void initialize(MinecraftServer server) {
-        bindRoot(NbtIoHelper.resolveRootPath(server));
-    }
-
-    public void bindRoot(Path root) {
-        Path rootPath = root == null ? Paths.get(".") : root.toAbsolutePath().normalize();
+        Path rootPath = NbtIoHelper.resolveRootPath(server).toAbsolutePath().normalize();
         this.storageFile = rootPath.resolve(Myulib.MOD_ID).resolve(FILE_NAME);
         try {
-            Files.createDirectories(this.storageFile.getParent());
+            if (!Files.exists(this.storageFile.getParent())) {
+                Files.createDirectories(this.storageFile.getParent());
+            }
         } catch (Exception e) {
-            System.err.println("[Myulib] 無法建立 Field 儲存目錄: " + e.getMessage());
+            Myulib.LOGGER.error("Failed to create Field storage directory: " + e.getMessage());
         }
     }
 
@@ -47,17 +52,18 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
             return new HashMap<>();
         }
         try {
-            CompoundTag root = readRoot(storageFile);
+            CompoundTag root = NbtIoHelper.readRoot(storageFile);
             Tag fieldsElement = root.get(FIELDS_KEY);
             if (fieldsElement instanceof ListTag list) {
                 for (int i = 0; i < list.size(); i++) {
                     FieldDefinition field = readField(list.getCompound(i).orElseThrow());
-                    fileMirror.put(field.id(), field);
+                    fileMirror.put(field.uuid(), field);
                 }
             }
             return new HashMap<>(fileMirror);
         } catch (Exception e) {
-            throw new IllegalStateException("無法讀取 Field NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to load Field NBT: " + storageFile, e);
+            return new HashMap<>();
         }
     }
 
@@ -74,10 +80,8 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
         }
     }
 
-    private void saveToFile() {
-        if (storageFile == null) {
-            return;
-        }
+    private synchronized void saveToFile() {
+        if (storageFile == null) return;
         try {
             CompoundTag root = new CompoundTag();
             ListTag list = new ListTag();
@@ -85,9 +89,9 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
                 list.add(writeField(field));
             }
             root.put(FIELDS_KEY, list);
-            writeRoot(storageFile, root);
+            NbtIoHelper.writeRoot(storageFile, root);
         } catch (Exception e) {
-            throw new IllegalStateException("無法儲存 Field NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to save Field NBT: " + storageFile, e);
         }
     }
 
@@ -106,8 +110,10 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
         tag.put("bounds", bounds);
 
         CompoundTag dataTag = new CompoundTag();
-        for (Map.Entry<String, Object> entry : field.fieldData().entrySet()) {
-            dataTag.putString(entry.getKey(), String.valueOf(entry.getValue()));
+        if (field.fieldData() != null) {
+            for (Map.Entry<String, Object> entry : field.fieldData().entrySet()) {
+                dataTag.putString(entry.getKey(), String.valueOf(entry.getValue()));
+            }
         }
         tag.put("data", dataTag);
         return tag;
@@ -117,29 +123,20 @@ public class NbtFieldStorage implements DataStorage<UUID, FieldDefinition> {
         Identifier id = Identifier.parse(tag.getString("id").orElse("myulib:unknown"));
         Identifier dim = Identifier.parse(tag.getString("dim").orElse("minecraft:overworld"));
         ListTag bounds = (ListTag) tag.get("bounds");
-        AABB aabb = new AABB(
-                bounds.getDouble(0).orElse(0.0), bounds.getDouble(1).orElse(0.0), bounds.getDouble(2).orElse(0.0),
-                bounds.getDouble(3).orElse(0.0), bounds.getDouble(4).orElse(0.0), bounds.getDouble(5).orElse(0.0)
-        );
+        AABB aabb = new AABB(0, 0, 0, 0, 0, 0);
+        if (bounds != null && bounds.size() >= 6) {
+            aabb = new AABB(
+                    bounds.getDouble(0).orElse(0.0), bounds.getDouble(1).orElse(0.0), bounds.getDouble(2).orElse(0.0),
+                    bounds.getDouble(3).orElse(0.0), bounds.getDouble(4).orElse(0.0), bounds.getDouble(5).orElse(0.0)
+            );
+        }
         Map<String, Object> fieldData = new LinkedHashMap<>();
         if (tag.contains("data")) {
             CompoundTag dataTag = tag.getCompound("data").orElseThrow();
-            for (String key : keysOf(dataTag)) {
+            for (String key : NbtIoHelper.keysOf(dataTag)) {
                 fieldData.put(key, dataTag.getString(key).orElse(""));
             }
         }
         return new FieldDefinition(id, dim, aabb, fieldData);
-    }
-
-    private static CompoundTag readRoot(Path path) throws Exception {
-        return NbtIoHelper.readRoot(path);
-    }
-
-    private static void writeRoot(Path path, CompoundTag root) throws Exception {
-        NbtIoHelper.writeRoot(path, root);
-    }
-
-    private static List<String> keysOf(CompoundTag compound) {
-        return NbtIoHelper.keysOf(compound);
     }
 }

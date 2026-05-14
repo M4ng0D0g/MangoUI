@@ -1,6 +1,7 @@
 package com.myudog.myulib.api.framework.permission.storage;
 
 import com.myudog.myulib.Myulib;
+
 import com.myudog.myulib.api.framework.permission.PermissionAction;
 import com.myudog.myulib.api.framework.permission.PermissionDecision;
 import com.myudog.myulib.api.framework.permission.PermissionScope;
@@ -8,47 +9,37 @@ import com.myudog.myulib.api.framework.permission.PermissionTable;
 import com.myudog.myulib.api.core.storage.DataStorage;
 import com.myudog.myulib.api.core.util.NbtIoHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.MinecraftServer;
 
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 實作 DataStorage 的 NBT 權限儲存庫。
- * 支援將扁平化 Key (global, dim:xxx, field:xxx) 轉換為階層式 NBT 結構儲存。
+ * NbtPermissionStorage
+ * 
+ * 系統：權限管理系統 (Framework - Permission)
+ * 角色：將權限範圍 (Scope) 持久化至 NBT 檔案。
+ * 類型：Storage Implementation
  */
 public class NbtPermissionStorage implements DataStorage<String, PermissionScope> {
 
     private static final String FILE_NAME = "permissions.dat";
     private Path storageFile;
-
-    // 檔案鏡像快取：用於單筆 save/delete 時快速重寫檔案
     private final Map<String, PermissionScope> fileMirror = new ConcurrentHashMap<>();
-
-    // =====================================================================
-    // 1. DataStorage 介面實作
-    // =====================================================================
 
     @Override
     public void initialize(MinecraftServer server) {
-        bindRoot(resolveRootPath(server));
-    }
-
-    public void bindRoot(Path root) {
-        Path rootPath = root == null ? Paths.get(".") : root.toAbsolutePath().normalize();
+        Path rootPath = NbtIoHelper.resolveRootPath(server).toAbsolutePath().normalize();
         this.storageFile = rootPath.resolve(Myulib.MOD_ID).resolve(FILE_NAME);
 
         try {
-            if (this.storageFile != null && !Files.exists(this.storageFile.getParent())) {
+            if (!Files.exists(this.storageFile.getParent())) {
                 Files.createDirectories(this.storageFile.getParent());
             }
         } catch (Exception e) {
-            System.err.println("[Myulib] 無法建立 Permission 儲存目錄: " + e.getMessage());
+            Myulib.LOGGER.error("Failed to create Permission storage directory: " + e.getMessage());
         }
     }
 
@@ -56,35 +47,32 @@ public class NbtPermissionStorage implements DataStorage<String, PermissionScope
     public Map<String, PermissionScope> loadAll() {
         fileMirror.clear();
         if (storageFile == null || !Files.exists(storageFile)) {
-            return new HashMap<>(); // 檔案不存在，回傳空 Map
+            return new HashMap<>();
         }
 
         try {
-            CompoundTag root = readRoot(storageFile);
+            CompoundTag root = NbtIoHelper.readRoot(storageFile);
 
-            // 讀取 Global Scope
             if (root.contains("global")) {
                 fileMirror.put("global", readScope(root.getCompound("global").orElseThrow()));
             }
 
-            // 讀取 Dimension Scopes
             if (root.contains("dimensions")) {
                 CompoundTag dimsTag = root.getCompound("dimensions").orElseThrow();
-                for (String key : keysOf(dimsTag)) {
+                for (String key : NbtIoHelper.keysOf(dimsTag)) {
                     fileMirror.put("dim:" + key, readScope(dimsTag.getCompound(key).orElseThrow()));
                 }
             }
 
-            // 讀取 Field Scopes
             if (root.contains("fields")) {
                 CompoundTag fieldsTag = root.getCompound("fields").orElseThrow();
-                for (String key : keysOf(fieldsTag)) {
+                for (String key : NbtIoHelper.keysOf(fieldsTag)) {
                     fileMirror.put("field:" + key, readScope(fieldsTag.getCompound(key).orElseThrow()));
                 }
             }
 
         } catch (Exception e) {
-            throw new IllegalStateException("無法讀取 Permission NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to load Permission NBT: " + storageFile, e);
         }
 
         return new HashMap<>(fileMirror);
@@ -102,10 +90,6 @@ public class NbtPermissionStorage implements DataStorage<String, PermissionScope
             saveToFile();
         }
     }
-
-    // =====================================================================
-    // 2. 內部寫入邏輯與 NBT 序列化轉換
-    // =====================================================================
 
     private synchronized void saveToFile() {
         if (storageFile == null) return;
@@ -129,16 +113,15 @@ public class NbtPermissionStorage implements DataStorage<String, PermissionScope
 
             root.put("dimensions", dimsTag);
             root.put("fields", fieldsTag);
-            writeRoot(storageFile, root);
+            NbtIoHelper.writeRoot(storageFile, root);
 
         } catch (Exception e) {
-            throw new IllegalStateException("無法儲存 Permission NBT: " + storageFile, e);
+            Myulib.LOGGER.error("Failed to save Permission NBT: " + storageFile, e);
         }
     }
 
     private CompoundTag writeScope(PermissionScope scope) {
         CompoundTag tag = new CompoundTag();
-
         CompoundTag playersTag = new CompoundTag();
         for (Map.Entry<UUID, PermissionTable> entry : scope.playerTablesSnapshot().entrySet()) {
             playersTag.put(entry.getKey().toString(), writeTable(entry.getValue()));
@@ -169,78 +152,30 @@ public class NbtPermissionStorage implements DataStorage<String, PermissionScope
         PermissionScope scope = new PermissionScope();
         if (tag.contains("players")) {
             CompoundTag playersTag = tag.getCompound("players").orElseThrow();
-            for (String uuidStr : keysOf(playersTag)) {
-                readTable(playersTag.getCompound(uuidStr).orElseThrow(), scope.forPlayer(UUID.fromString(uuidStr)));
+            for (String uuidStr : NbtIoHelper.keysOf(playersTag)) {
+                try {
+                    readTable(playersTag.getCompound(uuidStr).orElseThrow(), scope.forPlayer(UUID.fromString(uuidStr)));
+                } catch (Exception ignored) {}
             }
         }
         if (tag.contains("groups")) {
             CompoundTag groupsTag = tag.getCompound("groups").orElseThrow();
-            for (String groupName : keysOf(groupsTag)) {
-                readTable(groupsTag.getCompound(groupName).orElseThrow(), scope.forGroup(groupName));
+            for (String groupName : NbtIoHelper.keysOf(groupsTag)) {
+                try {
+                    readTable(groupsTag.getCompound(groupName).orElseThrow(), scope.forGroup(groupName));
+                } catch (Exception ignored) {}
             }
         }
         return scope;
     }
 
     private void readTable(CompoundTag tag, PermissionTable targetTable) {
-        for (String actionName : keysOf(tag)) {
+        for (String actionName : NbtIoHelper.keysOf(tag)) {
             try {
                 PermissionAction action = PermissionAction.valueOf(actionName);
                 PermissionDecision decision = PermissionDecision.valueOf(tag.getString(actionName).orElse("UNSET"));
                 targetTable.set(action, decision);
-            } catch (IllegalArgumentException ignored) {} // 忽略已廢棄或未知的 Enum
+            } catch (IllegalArgumentException ignored) {}
         }
-    }
-
-    // =====================================================================
-    // 3. NBT 反射底層工具 (安全實作)
-    // =====================================================================
-
-    private static CompoundTag readRoot(Path path) throws Exception {
-        return NbtIoHelper.readRoot(path);
-    }
-
-    private static void writeRoot(Path path, CompoundTag root) throws Exception {
-        NbtIoHelper.writeRoot(path, root);
-    }
-
-    private static Method findNbtIoMethod(String name, Path path) {
-        for (Method method : NbtIo.class.getMethods()) {
-            if (!method.getName().equals(name)) continue;
-            Class<?>[] params = method.getParameterTypes();
-            if (params.length == 1 && params[0].isAssignableFrom(Path.class)) return method;
-            if (params.length == 2 && (params[0].isAssignableFrom(Path.class) || params[0].isAssignableFrom(java.io.InputStream.class) || params[0].isAssignableFrom(java.io.OutputStream.class) || params[0].isAssignableFrom(CompoundTag.class))) return method;
-        }
-        return null;
-    }
-
-    private static Object[] buildNbtIoArguments(Method method, Path path, boolean reading) throws Exception {
-        Class<?>[] params = method.getParameterTypes();
-        if (params.length == 1) return new Object[]{path};
-        Object helper = createHelperArgument(params[1]);
-        if (helper == null && !params[1].isPrimitive()) helper = null;
-        if (params[0].isAssignableFrom(Path.class)) return new Object[]{path, helper};
-        if (params[0].isAssignableFrom(java.io.InputStream.class)) return new Object[]{Files.newInputStream(path), helper};
-        if (params[0].isAssignableFrom(java.io.OutputStream.class)) return new Object[]{Files.newOutputStream(path), helper};
-        return new Object[]{path, helper};
-    }
-
-    private static Object createHelperArgument(Class<?> type) {
-        try {
-            for (Method method : type.getMethods()) {
-                if (!java.lang.reflect.Modifier.isStatic(method.getModifiers()) || !type.isAssignableFrom(method.getReturnType())) continue;
-                if (method.getParameterCount() == 0) return method.invoke(null);
-            }
-            try { return type.getDeclaredConstructor().newInstance(); } catch (ReflectiveOperationException ignored) {}
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    private static List<String> keysOf(CompoundTag compound) {
-        return NbtIoHelper.keysOf(compound);
-    }
-
-    private static Path resolveRootPath(MinecraftServer server) {
-        return NbtIoHelper.resolveRootPath(server);
     }
 }

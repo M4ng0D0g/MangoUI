@@ -65,4 +65,18 @@ public abstract class GuiMixin {
             ci.cancel();
         }
     }
+
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void myulib$renderFade(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        float alpha = ClientCameraManager.INSTANCE.getFadeAlpha();
+        if (alpha > 0.001f) {
+            int r = ClientCameraManager.INSTANCE.getFadeR();
+            int g = ClientCameraManager.INSTANCE.getFadeG();
+            int b = ClientCameraManager.INSTANCE.getFadeB();
+            int color = ARGB.color((int)(alpha * 255), r, g, b);
+            
+            graphics.nextStratum();
+            graphics.fill(0, 0, 4000, 4000, color); // 使用足夠大的範圍覆蓋全螢幕
+        }
+    }
 }

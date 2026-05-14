@@ -14,7 +14,7 @@ public final class ClientControlManager {
 
     public static final ClientControlManager INSTANCE = new ClientControlManager();
 
-    private int disabledMask = 0;
+    private java.util.BitSet disabledMask = new java.util.BitSet();
     private boolean isControlling;
     private boolean isControlled;
     private boolean installed;
@@ -39,7 +39,7 @@ public final class ClientControlManager {
     }
 
     public boolean isDenied(ControlType type) {
-        return (this.disabledMask & (1 << type.ordinal())) != 0;
+        return this.disabledMask.get(type.ordinal());
     }
 
     public boolean isLockedOn() {
@@ -55,7 +55,7 @@ public final class ClientControlManager {
     }
 
     public boolean shouldBlockRotation() {
-        return lockedOn || isDenied(ControlType.ROTATE);
+        return lockedOn || isDenied(ControlType.ROTATE) || isDenied(ControlType.ROTATE_YAW) || isDenied(ControlType.ROTATE_PITCH);
     }
 
     public boolean shouldBlockLeftClick() {
@@ -77,10 +77,10 @@ public final class ClientControlManager {
         if (player == null) return;
 
         // 核心攔截：如果對應操作被禁止，則封包內容強制設為 false
-        boolean finalUp = isDenied(ControlType.MOVE) ? false : up;
-        boolean finalDown = isDenied(ControlType.MOVE) ? false : down;
-        boolean finalLeft = isDenied(ControlType.MOVE) ? false : left;
-        boolean finalRight = isDenied(ControlType.MOVE) ? false : right;
+        boolean finalUp = (isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_FORWARD)) ? false : up;
+        boolean finalDown = (isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_BACKWARD)) ? false : down;
+        boolean finalLeft = (isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_LEFT)) ? false : left;
+        boolean finalRight = (isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_RIGHT)) ? false : right;
         boolean finalJumping = isDenied(ControlType.JUMP) ? false : jumping;
         boolean finalSneaking = isDenied(ControlType.SNEAK) ? false : sneaking;
 
@@ -115,8 +115,18 @@ public final class ClientControlManager {
         return switch (type) {
             case JUMP -> isDenied(ControlType.JUMP);
             case SNEAK -> isDenied(ControlType.SNEAK);
+            case SPRINT -> isDenied(ControlType.SPRINT);
+            case CRAWL -> isDenied(ControlType.CRAWL);
             case LEFT_CLICK -> isDenied(ControlType.LEFT_CLICK);
             case RIGHT_CLICK -> isDenied(ControlType.RIGHT_CLICK);
+            case MOVE_FORWARD -> isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_FORWARD);
+            case MOVE_BACKWARD -> isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_BACKWARD);
+            case MOVE_LEFT -> isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_LEFT);
+            case MOVE_RIGHT -> isDenied(ControlType.MOVE) || isDenied(ControlType.MOVE_RIGHT);
+            case ROTATE_YAW -> isDenied(ControlType.ROTATE) || isDenied(ControlType.ROTATE_YAW);
+            case ROTATE_PITCH -> isDenied(ControlType.ROTATE) || isDenied(ControlType.ROTATE_PITCH);
+            case ROTATE -> isDenied(ControlType.ROTATE);
+            case F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12 -> isDenied(ControlType.valueOf(type.name()));
             default -> false;
         };
     }
@@ -133,11 +143,30 @@ public final class ClientControlManager {
             minecraft.options.keyLeft.setDown(false);
             minecraft.options.keyRight.setDown(false);
         }
+        if (isDenied(ControlType.MOVE_FORWARD)) minecraft.options.keyUp.setDown(false);
+        if (isDenied(ControlType.MOVE_BACKWARD)) minecraft.options.keyDown.setDown(false);
+        if (isDenied(ControlType.MOVE_LEFT)) minecraft.options.keyLeft.setDown(false);
+        if (isDenied(ControlType.MOVE_RIGHT)) minecraft.options.keyRight.setDown(false);
 
         if (isDenied(ControlType.JUMP)) minecraft.options.keyJump.setDown(false);
         if (isDenied(ControlType.SNEAK)) {
             minecraft.options.keyShift.setDown(false);
             if (minecraft.player != null) minecraft.player.setShiftKeyDown(false);
         }
+        if (isDenied(ControlType.SPRINT)) {
+            minecraft.options.keySprint.setDown(false);
+            if (minecraft.player != null) minecraft.player.setSprinting(false);
+        }
+        if (isDenied(ControlType.CRAWL)) {
+            // Crawl is harder to force off in vanilla without a mixin, 
+            // but we can at least stop the key.
+        }
+    }
+
+    public void resetState() {
+        this.disabledMask.clear();
+        this.isControlling = false;
+        this.isControlled = false;
+        this.lockedOn = false;
     }
 }

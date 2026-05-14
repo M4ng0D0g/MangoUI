@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.hologram.storage;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import com.myudog.myulib.api.core.hologram.HologramDefinition;
 import com.myudog.myulib.api.core.hologram.HologramStyle;
 import com.myudog.myulib.api.core.storage.DataStorage;
@@ -43,7 +43,7 @@ public class NbtHologramStorage implements DataStorage<UUID, HologramDefinition>
 
     public void bindRoot(Path root) {
         Path rootPath = root == null ? Paths.get(".") : root.toAbsolutePath().normalize();
-        this.storageFile = rootPath.resolve(Myulib.MOD_ID).resolve(FILE_NAME);
+        this.storageFile = rootPath.resolve(MyulibCore.MOD_ID).resolve(FILE_NAME);
 
         try {
             if (this.storageFile != null && !Files.exists(this.storageFile.getParent())) {

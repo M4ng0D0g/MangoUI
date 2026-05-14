@@ -55,9 +55,15 @@
 
 ---
 
-## 已測試功能
-- [x] 伺服器至客戶端相機封包派送
-- [x] 基礎震動效果 (Shake)
-- [x] Easing 補間移動 (MoveTo)
-- [x] 基於實體 Eyes Position 的跟隨邏輯
-- [x] 視角強制鎖定 (Perspective Lock)
+## 指令介面
+
+### 震動效果
+/myulib camerashake
+
+### 視角控制
+/myulib camera attach_to_entity
+/myulib camera detach_from_entity
+
+### 相機權限
+
+

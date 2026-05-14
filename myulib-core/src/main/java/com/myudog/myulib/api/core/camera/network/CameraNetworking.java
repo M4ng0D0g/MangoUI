@@ -2,7 +2,6 @@ package com.myudog.myulib.api.core.camera.network;
 
 import com.myudog.myulib.api.core.camera.CameraActionPayload;
 import com.myudog.myulib.api.core.camera.CameraDispatchBridge;
-import com.myudog.myulib.internal.camera.ClientCameraManager;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;

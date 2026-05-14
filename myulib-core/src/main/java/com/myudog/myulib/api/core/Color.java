@@ -1,9 +1,20 @@
 package com.myudog.myulib.api.core;
 
 /**
- * Shared color contract for systems that need named or RGB color values.
+ * Color
+ *
+ * 系統：核心基礎類型 (Core API - Data Types)
+ * 角色：定義顏色資訊的統一合約，支援 RGB 數值與分量提取。
+ * 類型：Interface / Data Contract
+ *
+ * 用於 UI、粒子特效以及任何需要顏色標籤的系統。
  */
 public interface Color {
+    /**
+     * 獲取打包後的 RGB 整數值 (0xRRGGBB)。
+     *
+     * @return RGB 數值
+     */
     int rgb();
 
     default float red() {

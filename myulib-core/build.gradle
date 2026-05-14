@@ -25,8 +25,19 @@ loom {
             sourceSet sourceSets.client
         }
     }
-    mixin {
-        defaultRefmapName = "myulib-core-refmap.json"
+    runs {
+        client {
+            client()
+            name "Minecraft Client - Core"
+            ideConfigGenerated true
+            runDir "run"
+        }
+        server {
+            server()
+            name "Minecraft Server - Core"
+            ideConfigGenerated true
+            runDir "run"
+        }
     }
 }
 
@@ -34,8 +45,7 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    
-
+    annotationProcessor "net.fabricmc:fabric-loader:${project.loader_version}"
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
     testImplementation "org.junit.platform:junit-platform-suite-engine:1.10.0"

@@ -1,6 +1,8 @@
 package com.myudog.myulib.api.framework.game.features;
 
+import com.myudog.myulib.api.core.ecs.EcsContainer;
 import com.myudog.myulib.api.framework.field.FieldDefinition;
+import com.myudog.myulib.api.framework.field.FieldInstance;
 import com.myudog.myulib.api.framework.field.FieldManager;
 import com.myudog.myulib.api.framework.game.core.GameInstance;
 import net.minecraft.resources.Identifier;
@@ -9,79 +11,70 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class FieldFeatureImpl implements FieldFeature {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Myulib-FieldFeature");
 
-    // 🌟 本地追蹤器：只記錄屬於「這個房間」的 Field ID
-    private final Set<java.util.UUID> activeFields = ConcurrentHashMap.newKeySet();
+    private final EcsContainer container;
+    private final Map<UUID, Integer> fieldEntities = new ConcurrentHashMap<>();
 
-    /**
-     * 將一個已經存在於全域 FieldManager 的區域，綁定到這個房間。
-     * @return 綁定是否成功
-     */
-    @Override
-    public boolean bindField(@NotNull java.util.UUID fieldId) {
-        if (FieldManager.INSTANCE.get(fieldId) == null) {
-            LOGGER.warn("嘗試綁定不存在的區域: {}", fieldId);
-            return false;
-        }
-        activeFields.add(fieldId);
-        return true;
+    public FieldFeatureImpl(EcsContainer container) {
+        this.container = container;
     }
 
-    /**
-     * 檢查給定座標是否落在本房間的「任何一個」綁定區域內。
-     * 應用場景：檢查玩家是否在遊戲規定的邊界範圍內。
-     */
+    @Override
+    public boolean bindField(@NotNull UUID fieldId) {
+        // In ECS architecture, binding might mean tracking an existing definition
+        return fieldEntities.containsKey(fieldId);
+    }
+
     @Override
     public boolean isInsideGameBounds(@NotNull Identifier dimensionId, @NotNull Vec3 position) {
-        // 利用 FieldManager 的全域查詢
-        Optional<FieldDefinition> found = FieldManager.INSTANCE.findAt(dimensionId, position);
-
-        // 確保找到的區域，是屬於這個房間的
-        return found.isPresent() && activeFields.contains(found.get().uuid());
-    }
-
-    /**
-     * 獲取給定座標上，屬於本房間的所有區域 ID (應付可能的未來重疊設計)。
-     */
-    @Override
-    public Set<java.util.UUID> getFieldsAt(@NotNull Identifier dimensionId, @NotNull Vec3 position) {
-        return activeFields.stream()
-                .map(FieldManager.INSTANCE::get)
-                .filter(def -> def != null && def.dimensionId().equals(dimensionId) && def.bounds().contains(position))
-                .map(FieldDefinition::uuid)
-                .collect(Collectors.toUnmodifiableSet());
-    }
-
-    /**
-     * 取得目前房間綁定的所有區域快照
-     */
-    @Override
-    public Set<java.util.UUID> getActiveFields() {
-        return Set.copyOf(activeFields);
+        for (Integer entityId : fieldEntities.values()) {
+            FieldInstance field = container.getComponent(entityId, FieldInstance.class);
+            if (field != null && field.definition.dimensionId().equals(dimensionId) && field.definition.bounds().contains(position)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
-    public void unbindField(@NotNull java.util.UUID fieldId) {
-        activeFields.remove(fieldId);
+    public Set<UUID> getFieldsAt(@NotNull Identifier dimensionId, @NotNull Vec3 position) {
+        Set<UUID> found = new HashSet<>();
+        for (Map.Entry<UUID, Integer> entry : fieldEntities.entrySet()) {
+            FieldInstance field = container.getComponent(entry.getValue(), FieldInstance.class);
+            if (field != null && field.definition.dimensionId().equals(dimensionId) && field.definition.bounds().contains(position)) {
+                found.add(entry.getKey());
+            }
+        }
+        return found;
+    }
+
+    @Override
+    public Set<UUID> getActiveFields() {
+        return Set.copyOf(fieldEntities.keySet());
+    }
+
+    @Override
+    public void unbindField(@NotNull UUID fieldId) {
+        Integer entityId = fieldEntities.remove(fieldId);
+        if (entityId != null) {
+            FieldManager.INSTANCE.destroyInstance(container, entityId);
+        }
     }
 
     @Override
     public void clean(GameInstance<?, ?, ?> instance) {
-        // 🌟 核心清理邏輯：當房間結束時，應該做兩件事：
-        // 1. 將屬於這個房間的區域從全域 FieldManager 中註銷
-        for (java.util.UUID fieldId : activeFields) {
-            FieldManager.INSTANCE.unregister(fieldId);
-        }
-
-        // 2. 清空本地追蹤器
-        activeFields.clear();
+        fieldEntities.values().forEach(id -> FieldManager.INSTANCE.destroyInstance(container, id));
+        fieldEntities.clear();
+    }
+    
+    public void registerField(FieldDefinition definition) {
+        int entityId = FieldManager.INSTANCE.createInstance(container, definition);
+        fieldEntities.put(definition.uuid(), entityId);
     }
 }

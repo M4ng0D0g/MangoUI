@@ -1,6 +1,6 @@
 package com.myudog.myulib.api.core.ecs.storage;
 
-import com.myudog.myulib.Myulib;
+import com.myudog.myulib.MyulibCore;
 import com.myudog.myulib.api.core.storage.DataStorage;
 import com.myudog.myulib.api.core.util.NbtIoHelper; // 假設您的反射工具類別名
 import net.minecraft.nbt.CompoundTag;
@@ -21,7 +21,7 @@ public class NbtEcsStorage implements DataStorage<Integer, CompoundTag> {
     public void initialize(MinecraftServer server) {
         // 使用您在 NbtFieldStorage 中實作的 resolveRootPath 邏輯
         Path root = NbtIoHelper.resolveRootPath(server);
-        this.storageFile = root.resolve(Myulib.MOD_ID).resolve(FILE_NAME);
+        this.storageFile = root.resolve(MyulibCore.MOD_ID).resolve(FILE_NAME);
     }
 
     @Override

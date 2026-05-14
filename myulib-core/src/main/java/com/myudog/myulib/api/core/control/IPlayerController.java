@@ -76,4 +76,14 @@ public interface IPlayerController {
         }
     }
 
+    /**
+     * 強制釋放所有意圖狀態
+     */
+    default void myulib_mc$forceReleaseAllIntents() {
+        ServerPlayer player = myulib_mc$getControlPlayer();
+        if (player != null) {
+            ControlManager.INSTANCE.forceReleaseAllIntents(player);
+        }
+    }
+
 }

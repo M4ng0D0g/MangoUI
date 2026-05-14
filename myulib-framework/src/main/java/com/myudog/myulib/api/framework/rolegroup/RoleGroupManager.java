@@ -12,18 +12,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.UnaryOperator;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * RoleGroupManager
+ *
+ * 系統：角色組管理系統 (Framework - RoleGroup)
+ * 角色：管理身分標籤（角色組），並將其分配給玩家。
+ * 類型：Manager / Identity Provider
+ */
 public final class RoleGroupManager {
 
     public static final RoleGroupManager INSTANCE = new RoleGroupManager();
 
-    // 🌟 記憶體狀態
     private final Map<UUID, RoleGroupDefinition> GROUPS = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> PLAYER_GROUPS = new ConcurrentHashMap<>();
-
-    // 🌟 注入你的專用 Storage 介面 (作為 DAO)
     private RoleGroupStorage storage;
 
-    private RoleGroupManager() {}
+    private RoleGroupManager() {
+    }
 
     public void install() {
         install(new NbtRoleGroupStorage());
@@ -38,13 +43,12 @@ public final class RoleGroupManager {
                 GROUPS.clear();
                 PLAYER_GROUPS.clear();
 
-                // 將 DAO 的資料全部載入記憶體
                 GROUPS.putAll(storage.loadGroups());
                 PLAYER_GROUPS.putAll(storage.loadAssignments());
             }
 
-            // 系統啟動時，確保預設的 everyone 身分組存在
-            UUID everyoneUuid = UUID.nameUUIDFromBytes("everyone".getBytes());
+            // Ensure default everyone group exists
+            UUID everyoneUuid = stableUuid("everyone");
             if (!GROUPS.containsKey(everyoneUuid)) {
                 MutableComponent translationKey = Component.translatable("myulib.rolegroup.everyone");
                 register(new RoleGroupDefinition(everyoneUuid, translationKey, -999, Map.of(), Set.of()));
@@ -57,12 +61,11 @@ public final class RoleGroupManager {
 
     public RoleGroupDefinition register(RoleGroupDefinition group) {
         if (!validate(group)) {
-            throw new IllegalArgumentException("RoleGroupDefinition 驗證失敗: " + (group == null ? "null" : group.uuid()));
+            throw new IllegalArgumentException("RoleGroupDefinition validation failed: " + (group == null ? "null" : group.uuid()));
         }
 
         GROUPS.put(group.uuid(), group);
-        DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP,
-                "register uuid=" + group.uuid() + ",priority=" + group.priority());
+        DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "register uuid=" + group.uuid() + ",priority=" + group.priority());
         if (storage != null) storage.saveGroup(group);
         return group;
     }
@@ -87,8 +90,6 @@ public final class RoleGroupManager {
     public RoleGroupDefinition delete(UUID groupUuid) {
         DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "delete uuid=" + groupUuid);
         if (storage != null) storage.deleteGroup(groupUuid);
-
-        // 同時從所有玩家身上移除該身分組
         PLAYER_GROUPS.values().forEach(set -> set.remove(groupUuid));
         return GROUPS.remove(groupUuid);
     }
@@ -99,14 +100,15 @@ public final class RoleGroupManager {
 
     public RoleGroupDefinition get(UUID groupUuid) { return GROUPS.get(groupUuid); }
     public RoleGroupDefinition get(net.minecraft.resources.Identifier groupUuid) { return get(stableUuid(groupUuid.toString())); }
+
     public List<RoleGroupDefinition> groups() { return List.copyOf(GROUPS.values()); }
 
     public boolean assign(UUID playerId, UUID groupUuid) {
         boolean added = PLAYER_GROUPS.computeIfAbsent(playerId, ignored -> new LinkedHashSet<>()).add(groupUuid);
         if (added) {
             DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "assign player=" + playerId + " -> group=" + groupUuid);
+            if (storage != null) storage.saveAssignments(playerId, PLAYER_GROUPS.get(playerId));
         }
-        if (added && storage != null) storage.saveAssignments(playerId, PLAYER_GROUPS.get(playerId));
         return added;
     }
 
@@ -116,59 +118,44 @@ public final class RoleGroupManager {
 
     public boolean revoke(UUID playerId, UUID groupUuid) {
         Set<UUID> groups = PLAYER_GROUPS.get(playerId);
-        if (groups != null && groups.remove(groupUuid)) {
-            DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "revoke player=" + playerId + " -> group=" + groupUuid);
+        if (groups == null) return false;
+        boolean removed = groups.remove(groupUuid);
+        if (removed) {
+            DebugLogManager.INSTANCE.log(DebugFeature.ROLEGROUP, "revoke player=" + playerId + " <- group=" + groupUuid);
             if (storage != null) storage.saveAssignments(playerId, groups);
-            return true;
         }
-        return false;
+        return removed;
     }
 
     public boolean revoke(UUID playerId, net.minecraft.resources.Identifier groupUuid) {
         return revoke(playerId, stableUuid(groupUuid.toString()));
     }
 
-    // --- 🎯 雙向查詢系統 (全記憶體運算，瞬間完成) ---
-
-    public Set<UUID> getPlayersInGroup(UUID groupUuid) {
-        Set<UUID> result = new HashSet<>();
-        for (Map.Entry<UUID, Set<UUID>> entry : PLAYER_GROUPS.entrySet()) {
-            if (entry.getValue().contains(groupUuid)) {
-                result.add(entry.getKey());
-            }
-        }
-        return result;
+    public Set<UUID> getAssignedGroups(UUID playerId) {
+        Set<UUID> groups = new LinkedHashSet<>(PLAYER_GROUPS.getOrDefault(playerId, Set.of()));
+        groups.add(stableUuid("everyone"));
+        return groups;
     }
 
-    public Set<UUID> getPlayersInGroup(net.minecraft.resources.Identifier groupUuid) {
-        return getPlayersInGroup(stableUuid(groupUuid.toString()));
-    }
-
-    public List<RoleGroupDefinition> getSortedGroupsOf(UUID playerId) {
-        Set<UUID> assignedUuids = PLAYER_GROUPS.getOrDefault(playerId, Set.of());
-
-        List<RoleGroupDefinition> assignedGroups = new ArrayList<>();
-        for (UUID uuid : assignedUuids) {
-            RoleGroupDefinition def = GROUPS.get(uuid);
-            if (def != null) assignedGroups.add(def);
-        }
-
-        // 依據 priority 排序
-        assignedGroups.sort((a, b) -> Integer.compare(b.priority(), a.priority()));
-
-        return assignedGroups;
-    }
-
-    public List<String> getSortedGroupIdsOf(net.minecraft.resources.Identifier playerId) {
-        return getSortedGroupIdsOf(stableUuid(playerId.toString()));
+    public List<RoleGroupDefinition> getAssignedDefinitions(UUID playerId) {
+        return getAssignedGroups(playerId).stream()
+                .map(GROUPS::get)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingInt(RoleGroupDefinition::priority).reversed())
+                .toList();
     }
 
     public List<String> getSortedGroupIdsOf(UUID playerId) {
-        return getSortedGroupsOf(playerId).stream().map(group -> group.uuid().toString()).toList();
+        return getAssignedDefinitions(playerId).stream()
+                .map(def -> def.uuid().toString())
+                .toList();
     }
 
     public void save() {
-        // 如果有批次存檔需求可實作
+        if (storage != null) {
+            GROUPS.values().forEach(storage::saveGroup);
+            PLAYER_GROUPS.forEach(storage::saveAssignments);
+        }
     }
 
     public void clear() {

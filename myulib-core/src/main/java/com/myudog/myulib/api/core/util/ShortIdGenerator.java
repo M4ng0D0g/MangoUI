@@ -2,15 +2,23 @@ package com.myudog.myulib.api.core.util;
 
 import java.security.SecureRandom;
 
+/**
+ * ShortIdGenerator
+ *
+ * 系統：通用工具系統 (Utility System)
+ * 角色：隨機短 ID 生成器。
+ * 類型：Utility / Factory
+ *
+ * 此類別用於生成隨機且簡短的識別碼，特別優化以符合 Minecraft Identifier 的命名規範：
+ * 1. 僅包含小寫字母 (a-z) 與數字 (0-9)。
+ * 2. 使用 {@code SecureRandom} 確保隨機性的品質。
+ * 適合用於生成動態實體 ID、會話 ID 或臨時檔案名。
+ */
 public final class ShortIdGenerator {
-    // 使用 SecureRandom 確保密碼學級別的隨機性，避免偽隨機數生成器的規律
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    // 🌟 修正重點：拔除大寫字母！只留下小寫字母與數字 (Base36)
-    // 這樣才能完美符合 Minecraft Identifier 的嚴格規範
     private static final String ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-    // 預設長度設為 10
     private static final int DEFAULT_LENGTH = 10;
 
     private ShortIdGenerator() {}

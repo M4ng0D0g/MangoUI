@@ -15,14 +15,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 具備「零閃爍 (Zero-Flicker)」機制的虛擬個人計分板
+ * ?瑕???? (Zero-Flicker)???嗥???犖閮???
  */
 public class VirtualSidebar {
     private final ServerPlayer player;
     private final String objectiveName;
     private Component title;
 
-    // 🌟 快取狀態：記錄當前畫面上實際有幾行，用來做差異比對與清除
+    // ?? 敹怠????閮??嗅??恍銝祕??撟曇?嚗靘?撌桃瘥?????
     private int currentLineCount = 0;
     private boolean isVisible = false;
 
@@ -40,7 +40,7 @@ public class VirtualSidebar {
         );
         player.connection.send(new ClientboundSetObjectivePacket(dummyObjective, 0)); // Action 0: Create
 
-        // 1.20.2+ 使用 DisplaySlot Enum
+        // 1.20.2+ 雿輻 DisplaySlot Enum
         player.connection.send(new ClientboundSetDisplayObjectivePacket(DisplaySlot.SIDEBAR, dummyObjective));
 
         isVisible = true;
@@ -53,7 +53,7 @@ public class VirtualSidebar {
         player.connection.send(new ClientboundSetObjectivePacket(dummyObjective, 1)); // Action 1: Remove
 
         isVisible = false;
-        currentLineCount = 0; // 重置狀態
+        currentLineCount = 0; // ?蔭???
     }
 
     public void updateTitle(Component newTitle) {
@@ -65,23 +65,23 @@ public class VirtualSidebar {
     }
 
     /**
-     * 🌟 零閃爍的核心更新演算法
+     * ?? ?園????詨??湔瞍?瘜?
      */
     public void updateLines(List<Component> newLines) {
         if (!isVisible) return;
 
         int newSize = newLines.size();
 
-        // 1. 更新或新增行數
+        // 1. ?湔?憓???
         for (int i = 0; i < newSize; i++) {
-            // 使用固定的內部 ID (例如 "line_00", "line_01")
+            // 雿輻?箏????ID (靘? "line_00", "line_01")
             String slotId = String.format("line_%02d", i);
 
-            // 計算在畫面上的分數排序 (越上面分數越高，確保由上往下排)
+            // 閮??函?Ｖ????豢?摨?(頞??Ｗ??貉?擃?蝣箔??曹?敺銝?)
             int scoreValue = 15 - i;
 
-            // 🌟 1.20.3+ 專屬封包：指定 slotId，但顯示 newLines.get(i) 的文字！
-            // ClientboundSetScorePacket(玩家名稱/ID, 計分板名稱, 分數, 顯示文字, 數字格式)
+            // ?? 1.20.3+ 撠惇撠?嚗?摰?slotId嚗?憿舐內 newLines.get(i) ??摮?
+            // ClientboundSetScorePacket(?拙振?迂/ID, 閮??踹?蝔? ?, 憿舐內??, ?詨??澆?)
             player.connection.send(new ClientboundSetScorePacket(
                     slotId,
                     this.objectiveName,
@@ -91,17 +91,17 @@ public class VirtualSidebar {
             ));
         }
 
-        // 2. 清除多餘的舊行數 (Delta Cleanup)
-        // 假設原本有 5 行，這次更新只傳入了 3 行，我們必須把舊的 line_03 和 line_04 刪除掉
+        // 2. 皜憭???銵 (Delta Cleanup)
+        // ?身???5 銵??活?湔?芸?乩? 3 銵??????? line_03 ??line_04 ?芷??
         if (currentLineCount > newSize) {
             for (int i = newSize; i < currentLineCount; i++) {
                 String obsoleteSlotId = String.format("line_%02d", i);
-                // 傳送 Reset 封包來抹除這個特定的 ID
+                // ?喲?Reset 撠?靘?日摰? ID
                 player.connection.send(new ClientboundResetScorePacket(obsoleteSlotId, this.objectiveName));
             }
         }
 
-        // 3. 更新快取狀態
+        // 3. ?湔敹怠????
         currentLineCount = newSize;
     }
 }

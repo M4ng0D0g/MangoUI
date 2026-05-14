@@ -14,22 +14,45 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * FieldVisualizationManager
+ *
+ * 蝟餌絞嚗??脣?啁頂蝯?(Framework - Field)
+ * 閫嚗?啗?閬箏?蝞∠??剁?鞎痊撠撩?蝡舐??游???郊?箏恥?嗥垢??舀?敶?(Hologram)?? * 憿?嚗anager / Renderer (Server-side sidecar)
+ *
+ * 甇斤頂蝯望????鈭?閬箏?璅∪????拙振嚗蒂?寞??嗡?蝵柴?撠?敺??末?＊蝷箸見撘?(HologramStyle)嚗? * 摰?撠?餈??游???郊蝯血恥?嗥垢?脰?皜脫??? */
 public final class FieldVisualizationManager {
 
     public static final FieldVisualizationManager INSTANCE = new FieldVisualizationManager();
 
-    
+    /** 撌脣??刻?閬箏?璅∪??摰?ID ????*/
     private final Set<UUID> ENABLED = ConcurrentHashMap.newKeySet();
+
+    /** 閮?瘥摰嗆?敺?甈∪?甇亦????喋?*/
     private final ConcurrentHashMap<UUID, Integer> LAST_SYNC_TICK = new ConcurrentHashMap<>();
+
+    /** ?拙振??閬箏???嚗?閮?64 ?憛???*/
     private final ConcurrentHashMap<UUID, Integer> PLAYER_RADIUS = new ConcurrentHashMap<>();
+
+    /** 瘥摰嗅閮剖???舀?敶望見撘?*/
     private final ConcurrentHashMap<UUID, HologramStyle> PLAYER_STYLE = new ConcurrentHashMap<>();
+
+    /** 瘥摰嗅閮剖??＊蝷箸芋撘?(憒??楠???氬?璅惜)??*/
     private final ConcurrentHashMap<UUID, DisplayMode> PLAYER_MODE = new ConcurrentHashMap<>();
+
     private volatile boolean installed;
+
+    /** 鞈??郊?餌? (Ticks)??*/
     private final int SYNC_INTERVAL_TICKS = 5;
 
+    /**
+     * ?游?＊蝷箸芋撘?蝢押?     */
     public enum DisplayMode {
+        /** ?＊蝷粹?獢?*/
         EDGES_ONLY,
+        /** 摰憿舐內 (?? + 摨扳?頠?+ 璅惜)??*/
         FULL,
+        /** ?＊蝷箸?蝐扎?*/
         LABELS_ONLY;
 
         public String token() {
@@ -55,8 +78,11 @@ public final class FieldVisualizationManager {
         }
     }
 
-    private FieldVisualizationManager() {}
+    private FieldVisualizationManager() {
+    }
 
+    /**
+     * 摰?閬死?頂蝯梧???隡箸???Tick 鈭辣??     */
     public void install() {
         if (installed) return;
         installed = true;
@@ -76,9 +102,8 @@ public final class FieldVisualizationManager {
         });
     }
 
-    public void installClient() {
-    }
-
+    /**
+     * ?箸?摰摰嗅??典?啗?閬箏???     */
     public void enable(UUID playerId) {
         ENABLED.add(playerId);
         PLAYER_RADIUS.putIfAbsent(playerId, 64);
@@ -86,6 +111,8 @@ public final class FieldVisualizationManager {
         PLAYER_MODE.putIfAbsent(playerId, DisplayMode.EDGES_ONLY);
     }
 
+    /**
+     * ?箸?摰摰嗅??典?啗?閬箏???     */
     public void disable(UUID playerId) {
         ENABLED.remove(playerId);
         LAST_SYNC_TICK.remove(playerId);
@@ -94,6 +121,8 @@ public final class FieldVisualizationManager {
         PLAYER_MODE.remove(playerId);
     }
 
+    /**
+     * 閮剖??拙振?＊蝷箸芋撘?     */
     public void setMode(UUID playerId, DisplayMode mode) {
         PLAYER_MODE.put(playerId, mode);
         switch (mode) {
@@ -124,11 +153,15 @@ public final class FieldVisualizationManager {
         return style == null ? HologramStyle.defaults() : style;
     }
 
+    /**
+     * ???孵??冽?蔣???????     */
     public void setFeature(UUID playerId, HologramFeature feature, boolean enabled) {
         HologramStyle current = getStyle(playerId);
         PLAYER_STYLE.put(playerId, current.withFeature(feature, enabled));
     }
 
+    /**
+     * ?箇摰嗆??蒂?郊???閬?舀?敶梧??游 + ?函??蔣嚗?     */
     private void renderForPlayer(ServerLevel level, ServerPlayer player, int tick) {
         Integer last = LAST_SYNC_TICK.getOrDefault(player.getUUID(), 0);
         if (tick - last < SYNC_INTERVAL_TICKS) return;
@@ -139,7 +172,7 @@ public final class FieldVisualizationManager {
         HologramStyle style = getStyle(player.getUUID());
         List<HologramDefinition> visible = new ArrayList<>();
 
-        // 1. 同步區域 (Field) 資料
+        // 1. ??銝行溶??餈??游 (Field)
         for (FieldDefinition field : FieldManager.INSTANCE.all().values()) {
             if (!field.dimensionId().equals(level.dimension().identifier())) continue;
             if (distanceToAabb(viewer, field.bounds()) > radius) continue;
@@ -153,7 +186,7 @@ public final class FieldVisualizationManager {
             ));
         }
 
-        // 2. 同步獨立的全息投影資料
+        // 2. ??銝行溶?蝡??冽?蔣 (Hologram)
         for (HologramDefinition holo : HologramManager.INSTANCE.all().values()) {
             if (!holo.dimensionId().equals(level.dimension().identifier())) continue;
             if (distanceToAabb(viewer, holo.bounds()) > radius) continue;

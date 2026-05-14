@@ -1,11 +1,7 @@
 package com.myudog.myulib.client.api.camera;
 
 import com.myudog.myulib.api.core.animation.Easing;
-import com.myudog.myulib.api.core.camera.CameraActionPayload;
-import com.myudog.myulib.api.core.camera.CameraModifier;
-import com.myudog.myulib.api.core.camera.CameraTrackingTarget;
-import com.myudog.myulib.api.core.camera.CameraTransform;
-import com.myudog.myulib.api.core.camera.CameraPerspective;
+import com.myudog.myulib.api.core.camera.*;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
@@ -36,6 +32,19 @@ public final class ClientCameraManager {
     // 特殊模式：偏移跟隨
     private boolean controlOffsetMode = false;
 
+    // --- 新增：Fade 效果狀態 ---
+    private int fadeR, fadeG, fadeB;
+    private float fadeAlpha = 0.0f;
+    private long fadeStartTime = 0;
+    private float fadeInTime, fadeHoldTime, fadeOutTime;
+
+    // --- 新增：FOV 效果狀態 ---
+    private float targetFov = -1;
+    private float startFov = -1;
+    private long fovStartTime = 0;
+    private long fovDuration = 0;
+    private Easing fovEasing = Easing.LINEAR;
+
     private ClientCameraManager() {}
 
     // --- 狀態存取 (Getters & Setters) ---
@@ -46,6 +55,11 @@ public final class ClientCameraManager {
     public CameraPerspective getCurrentPerspective() { return currentPerspective; }
     public boolean canUseF5() { return allowF5; }
 
+    public float getFadeAlpha() { return fadeAlpha; }
+    public int getFadeR() { return fadeR; }
+    public int getFadeG() { return fadeG; }
+    public int getFadeB() { return fadeB; }
+
     public void setPerspectiveState(CameraPerspective perspective, boolean allowF5) {
         this.currentPerspective = perspective;
         this.allowF5 = allowF5;
@@ -53,6 +67,16 @@ public final class ClientCameraManager {
 
     public boolean isControlOffsetMode() { return controlOffsetMode; }
     public void setControlOffsetMode(boolean mode) { this.controlOffsetMode = mode; }
+
+    public void resetState() {
+        this.trackingTarget = null;
+        this.currentPerspective = CameraPerspective.FREE;
+        this.allowF5 = true;
+        this.controlOffsetMode = false;
+        this.modifiers.clear();
+        this.fadeAlpha = 0;
+        this.targetFov = -1;
+    }
 
     // --- 核心功能方法 ---
 
@@ -72,14 +96,12 @@ public final class ClientCameraManager {
     /** 觸發攝影機移動至目標 */
     public void moveTo(Vec3 destination, long durationMillis, Easing easing) {
         if (destination == null) return;
-        // 使用目前相機位置作為起點
         Vec3 start = Minecraft.getInstance().gameRenderer.getMainCamera().position();
         addModifier(new PathAnimationModifier(start, CameraTrackingTarget.of(destination), durationMillis, easing));
     }
 
     // --- 網路封包處理 ---
 
-    /** 處理來自伺服器的相機動作封包 */
     public void applyPayload(CameraActionPayload payload) {
         if (payload == null) return;
 
@@ -104,45 +126,119 @@ public final class ClientCameraManager {
                 }
             }
             case SHAKE -> shake(payload.intensity(), payload.durationMillis());
-            case RESET -> {
+            case FADE -> {
+                this.fadeR = payload.r();
+                this.fadeG = payload.g();
+                this.fadeB = payload.b();
+                this.fadeInTime = payload.fadeIn();
+                this.fadeHoldTime = payload.hold();
+                this.fadeOutTime = payload.fadeOut();
+                this.fadeStartTime = System.currentTimeMillis();
+            }
+            case FOV_SET -> {
+                this.startFov = (float) Minecraft.getInstance().options.fov().get().doubleValue();
+                this.targetFov = payload.fov();
+                this.fovStartTime = System.currentTimeMillis();
+                this.fovDuration = payload.durationMillis();
+                this.fovEasing = payload.easing();
+            }
+            case FOV_CLEAR -> {
+                this.startFov = (float) Minecraft.getInstance().options.fov().get().doubleValue();
+                this.targetFov = -1; // -1 表示恢復預設
+                this.fovStartTime = System.currentTimeMillis();
+                this.fovDuration = payload.durationMillis();
+                this.fovEasing = payload.easing();
+            }
+            case ATTACH -> {
+                if (payload.targetEntityId() != null) {
+                    this.trackingTarget = CameraTrackingTarget.ofEntityId(payload.targetEntityId()).withOffset(payload.offset());
+                    this.setPerspectiveState(CameraPerspective.CUSTOM_OFFSET, false);
+                }
+            }
+            case DETACH -> {
                 this.trackingTarget = null;
                 this.setPerspectiveState(CameraPerspective.FREE, true);
-                clearModifiers();
             }
+            case SET_PRESET -> {
+                if ("minecraft:free".equals(payload.stringData())) {
+                    this.setPerspectiveState(CameraPerspective.FREE, true);
+                    this.trackingTarget = null;
+                } else if (payload.targetStaticPos() != null || payload.targetEntityId() != null) {
+                    // 如果 Preset 帶有目標，則切換到自定義偏移模式
+                    this.applyPayload(new CameraActionPayload(
+                        ActionType.MOVE_TO, payload.intensity(), payload.durationMillis(),
+                        payload.targetStaticPos(), payload.targetEntityId(),
+                        payload.lookAtStaticPos(), payload.lookAtEntityId(),
+                        payload.offset(), payload.easing(),
+                        0, 0, 0, 0, 0, 0, 0, ""
+                    ));
+                }
+            }
+            case RESET -> resetState();
         }
     }
 
     // --- 渲染層每幀呼叫邏輯 ---
 
-    /**
-     * 應用所有進行中的修改器並更新相機狀態。
-     * 由 CameraMixin 的 TAIL 注入點呼叫。
-     */
     public void applyAll(Camera camera, float tickDelta) {
+        long now = System.currentTimeMillis();
+
+        // 1. 更新 Fade 狀態
+        updateFade(now);
+
         if (camera == null || (modifiers.isEmpty() && trackingTarget == null)) return;
 
-        long now = System.currentTimeMillis();
-        // 建立轉換快照
+        // 2. 建立轉換快照
         CameraTransform transform = CameraTransform.of(
                 CameraCompat.getPosition(camera),
                 CameraCompat.getYaw(camera),
                 CameraCompat.getPitch(camera)
         );
 
-        // 1. 執行所有修改器運算（如 Shake, PathAnimation）
+        // 3. 執行所有修改器運算
         for (CameraModifier modifier : modifiers) {
             modifier.apply(transform, tickDelta, now);
         }
 
-        // 2. 將運算後的結果寫回相機物件（透過 Compat 或 Accessor）
+        // 4. 套用結果
         CameraCompat.setPosition(camera, transform.position());
         CameraCompat.setRotation(camera, transform.yaw(), transform.pitch());
 
-        // 3. 清理已過期的修改器
         modifiers.removeIf(modifier -> modifier.isFinished(now));
     }
 
-    /** 計算左後方偏移座標 (供特殊模式使用) */
+    private void updateFade(long now) {
+        if (fadeStartTime == 0) return;
+        float elapsed = (now - fadeStartTime) / 1000f;
+        if (elapsed < fadeInTime) {
+            fadeAlpha = elapsed / fadeInTime;
+        } else if (elapsed < fadeInTime + fadeHoldTime) {
+            fadeAlpha = 1.0f;
+        } else if (elapsed < fadeInTime + fadeHoldTime + fadeOutTime) {
+            fadeAlpha = 1.0f - (elapsed - (fadeInTime + fadeHoldTime)) / fadeOutTime;
+        } else {
+            fadeAlpha = 0;
+            fadeStartTime = 0;
+        }
+    }
+
+    /** 計算當前應用的 FOV 修改 */
+    public float getModifiedFov(float originalFov) {
+        if (fovStartTime == 0) return originalFov;
+        long now = System.currentTimeMillis();
+        float progress = (float) (now - fovStartTime) / fovDuration;
+        if (progress >= 1.0f) {
+            if (targetFov == -1) {
+                fovStartTime = 0;
+                return originalFov;
+            }
+            return targetFov;
+        }
+        float easedProgress = fovEasing.apply(progress);
+        float endFov = targetFov == -1 ? originalFov : targetFov;
+        return startFov + (endFov - startFov) * easedProgress;
+    }
+
     public Vec3 calculateLeftRearOffset(Entity focusedEntity, float tickDelta) {
         if (focusedEntity == null) return Vec3.ZERO;
         float yaw = focusedEntity.getViewYRot(tickDelta);
@@ -155,9 +251,7 @@ public final class ClientCameraManager {
         return new Vec3(rearX + leftX, 1.5, rearZ + leftZ);
     }
 
-    /** 簡單的座標檢測 */
     public Vec3 clipCameraToSpace(BlockGetter level, Vec3 cameraPos, Vec3 offset) {
-        // 此處目前為基礎實作，可進一步整合射線檢測防穿牆
         return cameraPos.add(offset);
     }
 }

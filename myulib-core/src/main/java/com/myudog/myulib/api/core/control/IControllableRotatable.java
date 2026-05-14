@@ -5,11 +5,11 @@ public interface IControllableRotatable extends IControllable {
      * @param yaw 目標偏航角
      * @param pitch 目標俯仰角
      */
-    void updateRotation(float yaw, float pitch);
+    void myulib_mc$updateRotation(float yaw, float pitch);
     
     /**
      * 決定該實體是否要訂閱玩家的視角同步
      * @return 若回傳 true，ControlManager 才會發送轉向指令
      */
-    boolean shouldSyncRotation();
+    boolean myulib_mc$shouldSyncRotation();
 }

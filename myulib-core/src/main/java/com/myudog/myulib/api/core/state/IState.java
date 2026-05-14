@@ -7,8 +7,6 @@ public interface IState<C extends IStateContext<C>> {
     default void onEnter(C context) {
     }
 
-    default void onTick(C context) {
-    }
 
     default void onExit(C context) {
     }

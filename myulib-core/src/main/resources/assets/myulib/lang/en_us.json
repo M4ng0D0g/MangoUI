@@ -1,5 +1,11 @@
 {
   "myulib.test.team.blue": "Blue Team",
   "myulib.rolegroup.everyone": "@everyone",
-  "team_spectator": "Spectators"
-}
+  "team_spectator": "Spectators",
+  "commands.myulib.camera.success.clear": "Cleared camera effects for %s players.",
+  "commands.myulib.camera.success.fade": "Applied fade effect to %s players.",
+  "commands.myulib.camera.success.fov": "Set FOV for %s players.",
+  "commands.myulib.camera.success.set": "Set camera preset '%s' for %s players.",
+  "commands.myulib.camera.success.attach": "Attached camera to entity for %s players.",
+  "commands.myulib.camera.success.detach": "Detached camera from entity for %s players."
+}

@@ -1,6 +1,5 @@
 package com.myudog.myulib.api.core.object.definition;
 
-import com.myudog.myulib.Myulib;
 import com.myudog.myulib.api.core.Property;
 import com.myudog.myulib.api.core.object.IObjectDef;
 import com.myudog.myulib.api.core.object.ObjectKind;

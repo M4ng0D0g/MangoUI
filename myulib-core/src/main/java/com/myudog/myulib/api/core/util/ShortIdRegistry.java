@@ -1,13 +1,20 @@
 package com.myudog.myulib.api.core.util;
 
+import com.myudog.myulib.api.core.debug.DebugFeature;
+import com.myudog.myulib.api.core.debug.DebugLogManager;
 import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 專屬於各 Manager 的短 ID 註冊與映射表。
- * 提供 Identifier 與 String(Short ID) 之間的極速雙向查詢。
+ * ShortIdRegistry
+ *
+ * 系統：通用工具系統 (Utility System)
+ * 角色：短 ID 與完整識別碼 (Identifier) 的映射註冊表。
+ * 類型：Utility / Container
+ *
+ * 提供 Identifier 與 String (Short ID) 之間的雙向查詢功能。
  */
 public final class ShortIdRegistry {
     private final Map<String, Identifier> shortToFull = new ConcurrentHashMap<>();
@@ -34,6 +41,8 @@ public final class ShortIdRegistry {
         } while (shortToFull.containsKey(shortId));
 
         bind(shortId, fullId);
+        DebugLogManager.INSTANCE.log(DebugFeature.UTIL,
+            "short-id bind full=" + fullId + ",short=" + shortId);
         return shortId;
     }
 
@@ -42,12 +51,16 @@ public final class ShortIdRegistry {
         String safeShortId = shortId.toLowerCase();
         shortToFull.put(safeShortId, fullId);
         fullToShort.put(fullId, safeShortId);
+        DebugLogManager.INSTANCE.log(DebugFeature.UTIL,
+                "bind short=" + safeShortId + ",full=" + fullId);
     }
 
     public void unbind(Identifier fullId) {
         String shortId = fullToShort.remove(fullId);
         if (shortId != null) {
             shortToFull.remove(shortId);
+            DebugLogManager.INSTANCE.log(DebugFeature.UTIL,
+                    "unbind short=" + shortId + ",full=" + fullId);
         }
     }
 
@@ -63,5 +76,6 @@ public final class ShortIdRegistry {
     public void clear() {
         shortToFull.clear();
         fullToShort.clear();
+        DebugLogManager.INSTANCE.log(DebugFeature.UTIL, "clear");
     }
 }

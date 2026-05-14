@@ -3,10 +3,7 @@ package com.myudog.myulib.api.core.control;
 import com.myudog.myulib.api.core.control.network.ServerControlNetworking;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -54,12 +51,15 @@ public final class PlayerInputGate {
         if (player == null || types.length == 0) return;
         UUID id = player.getUUID();
         EnumSet<ControlType> set = denied.computeIfAbsent(id, k -> EnumSet.noneOf(ControlType.class));
-        for (ControlType t : types) set.add(t);
+        set.addAll(Arrays.asList(types));
         
         com.myudog.myulib.api.core.debug.DebugLogManager.INSTANCE.log(
                 com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
                 "InputGate Deny: Player[" + player.getName().getString() + "] -> Types" + java.util.Arrays.toString(types)
         );
+
+        // 🌟 修正：當權限被拒絕時，強制對該玩家發送「釋放」意圖，防止按鍵卡死
+        com.myudog.myulib.api.core.control.ControlManager.INSTANCE.forceReleaseAllIntents(player);
         
         sync(player);
     }
@@ -75,6 +75,8 @@ public final class PlayerInputGate {
                 com.myudog.myulib.api.core.debug.DebugFeature.CONTROL,
                 "InputGate DenyAll: Player[" + player.getName().getString() + "]"
         );
+
+        com.myudog.myulib.api.core.control.ControlManager.INSTANCE.forceReleaseAllIntents(player);
         
         sync(player);
     }
@@ -173,24 +175,23 @@ public final class PlayerInputGate {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * 將 EnumSet 編碼為單一 int bitmask（ordinal 對應 bit 位）。
-     * 最多支援 32 種 ControlType（目前 8 種，充裕）。
+     * 將 EnumSet 編碼為 BitSet 同步。
      */
-    public int encodeMask(UUID playerId) {
+    public java.util.BitSet encodeBitSet(UUID playerId) {
         EnumSet<ControlType> set = denied.get(playerId);
-        if (set == null || set.isEmpty()) return 0;
-        int mask = 0;
-        for (ControlType t : set) mask |= (1 << t.ordinal());
-        return mask;
+        java.util.BitSet bitSet = new java.util.BitSet();
+        if (set == null || set.isEmpty()) return bitSet;
+        for (ControlType t : set) bitSet.set(t.ordinal());
+        return bitSet;
     }
 
     /**
-     * 從 bitmask 還原 EnumSet（Client 端解碼用）。
+     * 從 BitSet 還原 EnumSet（Client 端解碼用）。
      */
-    public static EnumSet<ControlType> decodeMask(int mask) {
+    public static EnumSet<ControlType> decodeBitSet(java.util.BitSet bitSet) {
         EnumSet<ControlType> result = EnumSet.noneOf(ControlType.class);
         for (ControlType t : ControlType.values()) {
-            if ((mask & (1 << t.ordinal())) != 0) result.add(t);
+            if (bitSet.get(t.ordinal())) result.add(t);
         }
         return result;
     }
@@ -200,6 +201,6 @@ public final class PlayerInputGate {
         UUID id = player.getUUID();
         boolean isControlling = ControlManager.INSTANCE.isController(id);
         boolean isControlled  = ControlManager.INSTANCE.isControlledTarget(id);
-        ServerControlNetworking.syncControlState(player, encodeMask(id), isControlling, isControlled);
+        ServerControlNetworking.syncControlState(player, encodeBitSet(id), isControlling, isControlled);
     }
 }
